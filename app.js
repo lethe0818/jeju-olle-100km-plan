@@ -54,21 +54,24 @@
     },
     {
       id: "0924", date: "9月24日", weekday: "周四", label: "1 + 牛岛", walkKm: 15.1, bikeKm: 13.2, routeIds: ["1", "1-1"],
-      lead: "公交优先：早晨坐201路到始兴里，走完1号线后在广峙其海边换车去城山港。",
-      next: { time: "05:35", title: "步行前往济州客运站", detail: "目标搭 05:55 左右的南向201路，在始兴里下车", mode: "201 BUS", place: "jejuTerminal" },
+      lead: "先坐201路到Playce Camp寄存行李，再返回古城站换反方向201路去始兴里起点。",
+      next: { time: "05:35", title: "New Star Hotel → Playce Camp寄存行李", detail: "步行到济州客运站，目标搭05:55左右的201路前往古城换乘站", mode: "201 BUS", place: "playce" },
       timeline: [
-        { time: "05:35", title: "退房，步行前往济州客运站", detail: "约 10–15 分钟；携带全部行李。", type: "步行", place: "jejuTerminal" },
-        { time: "05:55", title: "201 路 → 始兴里", detail: "预计 07:15–07:30 抵达。此时间为计划窗口，前一晚查中秋班次。", type: "公交", place: "siheung" },
-        { time: "07:30", title: "1 号线 · 始兴里 → 广峙其海边", detail: "15.1 km，官方参考 4–5 小时；起点、中间、终点章都要盖。", type: "徒步", place: "siheung" },
-        { time: "11:45", title: "抵达广峙其海边", detail: "盖完终点章后，在广峙其海边站搭211、212或295路前往城山港。", type: "转场", place: "gwangchigi" },
-        { time: "13:10", title: "城山港购票、候船", detail: "预留约40分钟办理乘船手续，现场确认17:30返程船班。", type: "船班", place: "seongsanPort" },
+        { time: "05:35", title: "退房，步行前往济州客运站", detail: "约10–15分钟；携带全部行李。", type: "步行", place: "jejuTerminal" },
+        { time: "05:55", title: "201路 → 古城换乘站", detail: "预计07:20–07:35抵达；此时间为计划窗口，前一晚复核中秋班次。", type: "公交", place: "playce" },
+        { time: "07:35", title: "步行前往Playce Camp", detail: "从古城换乘站步行约5–10分钟到酒店。", type: "步行", place: "playce" },
+        { time: "07:45", title: "酒店寄存行李", detail: "只做快速寄存，必须提前联系酒店确认清晨可接收行李。", type: "行李", place: "playce" },
+        { time: "07:55", title: "返回古城站，搭201路去始兴里", detail: "在反方向站台乘车；目标08:15–08:25抵达1号线起点。", type: "公交", place: "siheung" },
+        { time: "08:25", title: "1号线 · 始兴里 → 广峙其海边", detail: "15.1 km，按约4小时快走；起点、中间、终点章都要盖。", type: "徒步", place: "siheung" },
+        { time: "12:20", title: "抵达广峙其海边", detail: "盖完终点章后，在广峙其海边站搭211、212或295路前往城山港。", type: "转场", place: "gwangchigi" },
+        { time: "13:00", title: "城山港购票、候船", detail: "预留约1小时办理乘船手续并简单补给，现场确认17:30返程船班。", type: "船班", place: "seongsanPort" },
         { time: "14:00", title: "乘船前往牛岛", detail: "约15分钟抵达，租车时确认17:10前还车。", type: "船班", place: "udo" },
         { time: "14:30", title: "牛岛 1-1 号线骑行", detail: "13.2 km，骑行目标约2.5小时；骑行不计入本页认证步行里程。", type: "骑行", place: "udo" },
         { time: "17:10", title: "回到牛岛码头", detail: "还车后搭17:30返程船；18:00末班只作为紧急备用。", type: "截止", place: "udo", risk: true },
-        { time: "18:00", title: "城山港 → Playce Camp", detail: "搭211、212或295路，在古城换乘站附近下车后步行到酒店。", type: "公交", place: "playce" }
+        { time: "18:00", title: "城山港 → Playce Camp", detail: "搭211、212或295路，在古城换乘站附近下车；到酒店取行李并办理入住。", type: "公交", place: "playce" }
       ],
-      cutoff: "12:30 尚未走完1号线，就取消牛岛骑行，避免把18:00末班船当作唯一返程。",
-      fallback: "牛岛取消后，从广峙其海边搭201、211、212或295路前往古城换乘站，步行入住Playce Camp。",
+      cutoff: "前一晚必须确认Playce Camp可在07:45左右寄存。08:05仍未离开酒店就打车去始兴里；12:35尚未走完1号线则取消牛岛骑行。",
+      fallback: "牛岛取消后，从广峙其海边搭201、211、212或295路返回古城换乘站，步行到Playce Camp取行李并入住。",
       hotel: "playce"
     },
     {
