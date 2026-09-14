@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#073f43">
+  <meta name="description" content="2026 年 9 月济州偶来小路 100 km 徒步计划表">
+  <title>济州偶来 100 km · 行程计划表</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-photo" aria-hidden="true"></div>
+    <div class="header-inner">
+      <div class="trip-mark" aria-hidden="true"><span>JEJU</span><b>100</b></div>
+      <div class="header-copy">
+        <p class="eyebrow">2026.09.23—09.28 · SOLO WALK</p>
+        <h1>济州偶来<br><span>100 km 计划表</span></h1>
+        <p class="header-route">济州机场 → 东部海岸 → 西归浦 → 加波岛 → 济州机场</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section id="trip-summary" class="summary-band" aria-label="行程总览"></section>
+    <nav id="day-tabs" class="day-tabs" aria-label="选择日期"></nav>
+
+    <div class="workspace">
+      <section id="day-view" class="day-view" aria-live="polite"></section>
+      <aside class="utility-rail">
+        <section id="certificate-panel" class="rail-section"></section>
+        <section id="quick-links" class="rail-section"></section>
+        <section class="rail-section notes-section">
+          <div class="section-heading compact">
+            <div>
+              <p class="section-kicker">随手记</p>
+              <h2>全程备忘</h2>
+            </div>
+            <span class="autosave-status" id="autosave-status">已自动保存</span>
+          </div>
+          <textarea id="trip-notes" rows="7" placeholder="车票、天气、临时变更……" aria-label="全程备忘"></textarea>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    <p>路线时刻为计划窗口，不替代当日公交与船班公告。</p>
+    <p class="photo-credit">照片：Jeju Olle Foundation，<a href="https://commons.wikimedia.org/wiki/File:Jeju_Olle_Trail_Route_02_1.jpg" target="_blank" rel="noopener">CC BY-SA 4.0</a></p>
+  </footer>
+
+  <nav class="mobile-jump-nav" aria-label="手机快捷导航">
+    <button type="button" data-jump="day">行程</button>
+    <button type="button" data-jump="timeline">时间轴</button>
+    <button type="button" data-jump="stamps">盖章</button>
+    <button type="button" data-jump="certificate">证书</button>
+    <button id="mobile-settings-open" type="button">显示</button>
+  </nav>
+
+  <button id="tweaks-open" class="tweaks-open" type="button" aria-label="打开显示设置" title="显示设置">Aa</button>
+  <section id="tweaks" class="tweaks" aria-label="显示设置" hidden>
+    <div class="tweaks-head">
+      <h2>Tweaks</h2>
+      <button id="tweaks-close" class="icon-button" type="button" aria-label="关闭显示设置" title="关闭">×</button>
+    </div>
+    <label for="theme-select">视觉方向</label>
+    <select id="theme-select">
+      <option value="timeline">清晰时间轴</option>
+      <option value="ticket">紧凑车票</option>
+      <option value="journal">纸质手账</option>
+    </select>
+    <label class="toggle-row"><span>紧凑显示</span><input id="density-toggle" type="checkbox"><i aria-hidden="true"></i></label>
+    <label class="toggle-row"><span>减少动效</span><input id="motion-toggle" type="checkbox"><i aria-hidden="true"></i></label>
+    <div class="tweaks-actions">
+      <button id="print-button" class="secondary-button" type="button">打印 / PDF</button>
+      <button id="reset-button" class="text-button danger" type="button">恢复默认</button>
+    </div>
+  </section>
+
+  <template id="loading-template">
+    <div class="empty-state"><p>正在整理今天的行程……</p></div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
