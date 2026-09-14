@@ -31,7 +31,8 @@
     cafeSalle: { name: "Cafe Salle", korean: "카페살레", address: "제주 제주시 우도면 우도해안길 816 1,2층", lat: 33.5131314, lng: 126.9577602 },
     ojeong: { name: "Ojeong紫菜包饭", korean: "오는정김밥", address: "제주 서귀포시 동문동로 2 1층", lat: 33.2496637, lng: 126.5675976 },
     angeori: { name: "Angeori Bangeori", korean: "안거리밖거리", address: "제주 서귀포시 솔동산로 6-1", lat: 33.2442633, lng: 126.5641048 },
-    chunsim: { name: "Chunsim's 总店", korean: "춘심이네 본점", address: "제주 서귀포시 안덕면 창천중앙로24번길 16", lat: 33.2645164, lng: 126.370493 }
+    chunsim: { name: "Chunsim's 总店", korean: "춘심이네 본점", address: "제주 서귀포시 안덕면 창천중앙로24번길 16", lat: 33.2645164, lng: 126.370493 },
+    miyeong: { name: "Miyeongine 生鱼片餐厅", korean: "미영이네", address: "제주 서귀포시 대정읍 하모항구로 42", lat: 33.217709, lng: 126.2497839 }
   };
 
   const foodStops = {
@@ -48,6 +49,9 @@
     ],
     "0927": [
       { id: "chunsim", place: "chunsim", priority: "可选晚餐", slot: "返回民宿后 · 打车约 10 分钟", dish: "통갈치구이 · 整条烤带鱼", note: "偏多人分享菜，一个人用餐先确认是否有合适份量；不要为了餐厅延长当天徒步。", mode: "打车" }
+    ],
+    "0928": [
+      { id: "miyeong", place: "miyeong", priority: "返港午餐", slot: "加波岛返航后 · 约 12:35–13:45", dish: "고등어회 · 青花鱼刺身", note: "从云津港打车前往；独自用餐先确认是否接待及合适份量。排队超过 20 分钟就放弃；用餐后将机场公交顺延至 14:00 以后。", mode: "打车" }
     ]
   };
 
