@@ -28,6 +28,7 @@
     gapado: { name: "加波岛上洞浦口", korean: "가파도 상동포구", address: "제주특별자치도 서귀포시 대정읍 가파리", lat: 33.16974, lng: 126.27136 },
     manjo: { name: "Manjo Icheon 米饭 · 济州城山店", korean: "만조이천쌀밥 제주성산점", address: "제주 서귀포시 성산읍 성산중앙로 5", lat: 33.460901, lng: 126.9311815 },
     seomSonai: { name: "Seom Sonai 牛岛本店", korean: "섬소나이 우도본점", address: "제주 제주시 우도면 우도해안길 814", lat: 33.513337, lng: 126.9575652 },
+    cafeSalle: { name: "Cafe Salle", korean: "카페살레", address: "제주 제주시 우도면 우도해안길 816 1,2층", lat: 33.5131314, lng: 126.9577602 },
     ojeong: { name: "Ojeong紫菜包饭", korean: "오는정김밥", address: "제주 서귀포시 동문동로 2 1층", lat: 33.2496637, lng: 126.5675976 },
     angeori: { name: "Angeori Bangeori", korean: "안거리밖거리", address: "제주 서귀포시 솔동산로 6-1", lat: 33.2442633, lng: 126.5641048 },
     chunsim: { name: "Chunsim's 总店", korean: "춘심이네 본점", address: "제주 서귀포시 안덕면 창천중앙로24번길 16", lat: 33.2645164, lng: 126.370493 }
@@ -36,7 +37,8 @@
   const foodStops = {
     "0924": [
       { id: "manjo", place: "manjo", priority: "首选晚餐", slot: "牛岛返航后 · 18:00–19:00", dish: "돌솥정식 · 石锅米饭定食", note: "这家店在城山，不在牛岛上。当前页面显示 09:30–20:00、15:00–17:00 休息、19:00 最后点单；中秋营业务必前一晚复核。", mode: "公交" },
-      { id: "seom-sonai", place: "seomSonai", priority: "骑行备选", slot: "1-1 号线途中 · 最多停留 25 分钟", dish: "해물짬뽕 · 海鲜辣汤面", note: "只有骑行进度领先时再去；15:30 后仍未到店就跳过，不能影响 17:10 还车。", mode: "骑行" }
+      { id: "cafe-salle", place: "cafeSalle", priority: "甜品打卡", slot: "1-1 号线途中 · 停留 15–20 分钟", dish: "우도땅콩쿠키 · 牛岛花生曲奇", note: "位于牛岛海岸路 816 号，与 Seom Sonai 相邻。经过时顺路购买即可，最迟 16:10 离店，营业状态当天确认。", mode: "骑行" },
+      { id: "seom-sonai", place: "seomSonai", priority: "骑行备选", slot: "与 Cafe Salle 二选一 · 最多 25 分钟", dish: "해물짬뽕 · 海鲜辣汤面", note: "只有骑行进度领先时再安排正餐；不要与甜品店都久坐，不能影响 17:10 还车。", mode: "骑行" }
     ],
     "0925": [
       { id: "ojeong", place: "ojeong", priority: "入住后", slot: "15:15 后 · Kenny Stay 附近", dish: "오는정김밥 · 招牌紫菜包饭", note: "热门取餐店，建议到西归浦前先电话确认当日营业和可取餐时间，不为排队耽误次日休息。", mode: "步行" }
