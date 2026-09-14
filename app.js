@@ -5,27 +5,27 @@
   const trip = { plannedWalkKm: 106.3, plannedBikeKm: 13.2 };
 
   const places = {
-    airport: { name: "济州国际机场", korean: "제주국제공항", address: "제주특별자치도 제주시 공항로 2" },
-    newStar: { name: "New Star Hotel", korean: "뉴 스타 호텔", address: "제주특별자치도 제주시 서사로 102" },
-    jejuTerminal: { name: "济州客运站", korean: "제주버스터미널", address: "제주특별자치도 제주시 서광로 174" },
-    siheung: { name: "始兴里 · 1号线起点", korean: "시흥리 제주올레 1코스 시작점", address: "제주특별자치도 서귀포시 성산읍 시흥리" },
-    gwangchigi: { name: "广峙其海边", korean: "광치기해변", address: "제주특별자치도 서귀포시 성산읍 고성리" },
-    seongsanPort: { name: "城山港客运码头", korean: "성산포항 종합여객터미널", address: "제주특별자치도 서귀포시 성산읍 성산등용로 112-7" },
-    udo: { name: "牛岛天津港", korean: "우도 천진항", address: "제주특별자치도 제주시 우도면 연평리" },
-    playce: { name: "Playce Camp Jeju", korean: "플레이스캠프 제주", address: "제주특별자치도 서귀포시 성산읍 동류암로 20" },
-    namwon: { name: "南元浦口", korean: "남원포구", address: "제주특별자치도 서귀포시 남원읍 남태해안로" },
-    soesokkak: { name: "牛沼河口", korean: "쇠소깍", address: "제주특별자치도 서귀포시 쇠소깍로 104" },
-    traveler: { name: "济州偶来旅行者中心", korean: "제주올레 여행자센터", address: "제주특별자치도 서귀포시 중정로 22" },
-    kenny: { name: "Kenny Stay Jeju Seogwipo", korean: "케니 스테이 제주 서귀포", address: "제주특별자치도 서귀포시 동문로 42" },
-    seogwipoTerminal: { name: "西归浦客运站", korean: "서귀포버스터미널", address: "제주특별자치도 서귀포시 일주동로 9217" },
-    wolpyeong: { name: "月坪偶来起点", korean: "월평아왜낭목 쉼터", address: "제주특별자치도 서귀포시 월평동" },
-    daepyeong: { name: "大坪浦口", korean: "대평포구", address: "제주특별자치도 서귀포시 안덕면 창천리" },
-    amantov: { name: "Amantov Pension", korean: "아만토브 펜션", address: "제주특별자치도 서귀포시 예래로 446" },
-    hwasun: { name: "和顺金沙滩", korean: "화순금모래해수욕장", address: "제주특별자치도 서귀포시 안덕면 화순해안로 69" },
-    seotal: { name: "Seotal Oreum停车场亭子", korean: "섯알오름 주차장 정자", address: "제주특별자치도 서귀포시 대정읍 상모리 1590-3" },
-    hamo: { name: "摹瑟浦运动场", korean: "하모체육공원", address: "제주특별자치도 서귀포시 대정읍 최남단해안로29번길 14" },
-    unjin: { name: "云津港", korean: "운진항", address: "제주특별자치도 서귀포시 대정읍 최남단해안로 120" },
-    gapado: { name: "加波岛上洞浦口", korean: "가파도 상동포구", address: "제주특별자치도 서귀포시 대정읍 가파리" }
+    airport: { name: "济州国际机场", korean: "제주국제공항", address: "제주특별자치도 제주시 공항로 2", lat: 33.5070711, lng: 126.4916441 },
+    newStar: { name: "New Star Hotel", korean: "뉴 스타 호텔", address: "제주특별자치도 제주시 서사로 102", lat: 33.5032906, lng: 126.5196238 },
+    jejuTerminal: { name: "济州客运站", korean: "제주버스터미널", address: "제주특별자치도 제주시 서광로 174", lat: 33.49919, lng: 126.516324 },
+    siheung: { name: "始兴里 · 1号线起点", korean: "시흥리 제주올레 1코스 시작점", address: "제주특별자치도 서귀포시 성산읍 시흥리", lat: 33.47098, lng: 126.88892 },
+    gwangchigi: { name: "广峙其海边", korean: "광치기해변", address: "제주특별자치도 서귀포시 성산읍 고성리", lat: 33.4537662, lng: 126.9255233 },
+    seongsanPort: { name: "城山港客运码头", korean: "성산포항 종합여객터미널", address: "제주특별자치도 서귀포시 성산읍 성산등용로 112-7", lat: 33.4719127, lng: 126.9331048 },
+    udo: { name: "牛岛天津港", korean: "우도 천진항", address: "제주특별자치도 제주시 우도면 연평리", lat: 33.492818, lng: 126.9516017 },
+    playce: { name: "Playce Camp Jeju", korean: "플레이스캠프 제주", address: "제주특별자치도 서귀포시 성산읍 동류암로 20", lat: 33.4498936, lng: 126.9187505 },
+    namwon: { name: "南元浦口", korean: "남원포구", address: "제주특별자치도 서귀포시 남원읍 남태해안로", lat: 33.2778081, lng: 126.7195669 },
+    soesokkak: { name: "牛沼河口", korean: "쇠소깍", address: "제주특별자치도 서귀포시 쇠소깍로 104", lat: 33.2525937, lng: 126.6234661 },
+    traveler: { name: "济州偶来旅行者中心", korean: "제주올레 여행자센터", address: "제주특별자치도 서귀포시 중정로 22", lat: 33.2473863, lng: 126.5586387 },
+    kenny: { name: "Kenny Stay Jeju Seogwipo", korean: "케니 스테이 제주 서귀포", address: "제주특별자치도 서귀포시 동문로 42", lat: 33.2500953, lng: 126.5649706 },
+    seogwipoTerminal: { name: "西归浦客运站", korean: "서귀포버스터미널", address: "제주특별자치도 서귀포시 일주동로 9217", lat: 33.248726, lng: 126.508138 },
+    wolpyeong: { name: "月坪偶来起点", korean: "월평아왜낭목 쉼터", address: "제주특별자치도 서귀포시 월평동", lat: 33.2463149, lng: 126.4607759 },
+    daepyeong: { name: "大坪浦口", korean: "대평포구", address: "제주특별자치도 서귀포시 안덕면 창천리", lat: 33.2371271, lng: 126.3617071 },
+    amantov: { name: "Amantov Pension", korean: "아만토브 펜션", address: "제주특별자치도 서귀포시 예래로 446", lat: 33.2357195, lng: 126.3703987 },
+    hwasun: { name: "和顺金沙滩", korean: "화순금모래해수욕장", address: "제주특별자치도 서귀포시 안덕면 화순해안로 69", lat: 33.2403903, lng: 126.3331684 },
+    seotal: { name: "Seotal Oreum停车场亭子", korean: "섯알오름 주차장 정자", address: "제주특별자치도 서귀포시 대정읍 상모리 1590-3", lat: 33.2055144, lng: 126.27982 },
+    hamo: { name: "摹瑟浦运动场", korean: "하모체육공원", address: "제주특별자치도 서귀포시 대정읍 최남단해안로29번길 14", lat: 33.218616, lng: 126.2524507 },
+    unjin: { name: "云津港", korean: "운진항", address: "제주특별자치도 서귀포시 대정읍 최남단해안로 120", lat: 33.2096928, lng: 126.2591594 },
+    gapado: { name: "加波岛上洞浦口", korean: "가파도 상동포구", address: "제주특별자치도 서귀포시 대정읍 가파리", lat: 33.16974, lng: 126.27136 }
   };
 
   const routes = {
@@ -190,17 +190,27 @@
     });
   }
 
-  function mapLinks(placeKey) {
+  function routeMode(context) {
+    const value = String(context || "").toLowerCase();
+    if (/打车|taxi/.test(value)) return { kakao: "CAR", naver: "car" };
+    if (/公交|bus|船班|航班/.test(value)) return { kakao: "PUBLICTRANSIT", naver: "public" };
+    if (/骑行|bike|bicycle/.test(value)) return { kakao: "FOOT", naver: "bicycle" };
+    return { kakao: "FOOT", naver: "walk" };
+  }
+
+  function mapLinks(placeKey, context) {
     const place = places[placeKey];
     if (!place) return "";
-    const query = encodeURIComponent(place.korean + " " + place.address);
-    const kakaoWeb = `https://map.kakao.com/link/search/${query}`;
-    const naverWeb = `https://map.naver.com/p/search/${query}`;
-    const kakaoApp = `kakaomap://search?q=${query}`;
-    const naverApp = `nmap://search?query=${query}&appname=jeju.olle.plan`;
-    const kakaoIntent = `intent://search?q=${query}#Intent;scheme=kakaomap;package=net.daum.android.map;S.browser_fallback_url=${encodeURIComponent(kakaoWeb)};end`;
-    const naverIntent = `intent://search?query=${query}&appname=jeju.olle.plan#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=${encodeURIComponent(naverWeb)};end`;
-    return `<div class="map-actions"><a class="map-link" href="${htmlEscape(kakaoWeb)}" target="_blank" rel="noopener" data-map-app="Kakao Map" data-app-url="${htmlEscape(kakaoApp)}" data-android-intent="${htmlEscape(kakaoIntent)}" aria-label="使用Kakao Map打开${htmlEscape(place.name)}">KAKAO MAP</a><a class="map-link" href="${htmlEscape(naverWeb)}" target="_blank" rel="noopener" data-map-app="Naver Map" data-app-url="${htmlEscape(naverApp)}" data-android-intent="${htmlEscape(naverIntent)}" aria-label="使用Naver Map打开${htmlEscape(place.name)}">NAVER MAP</a></div>`;
+    const mode = routeMode(context);
+    const destinationName = encodeURIComponent(place.korean);
+    const currentLocationName = encodeURIComponent("내 위치");
+    const kakaoWeb = `https://map.kakao.com/link/to/${destinationName},${place.lat},${place.lng}`;
+    const naverWeb = `https://map.naver.com/p/directions/-,,/${place.lng},${place.lat},${destinationName}/-/${mode.naver}`;
+    const kakaoApp = `kakaomap://route?ep=${place.lat},${place.lng}&by=${mode.kakao}`;
+    const naverApp = `nmap://route/${mode.naver}?sname=${currentLocationName}&dlat=${place.lat}&dlng=${place.lng}&dname=${destinationName}&appname=jeju.olle.plan`;
+    const kakaoIntent = `intent://route?ep=${place.lat},${place.lng}&by=${mode.kakao}#Intent;scheme=kakaomap;package=net.daum.android.map;S.browser_fallback_url=${encodeURIComponent(kakaoWeb)};end`;
+    const naverIntent = `intent://route/${mode.naver}?sname=${currentLocationName}&dlat=${place.lat}&dlng=${place.lng}&dname=${destinationName}&appname=jeju.olle.plan#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=${encodeURIComponent(naverWeb)};end`;
+    return `<div class="map-actions"><a class="map-link" href="${htmlEscape(kakaoWeb)}" target="_blank" rel="noopener" data-map-app="Kakao Map" data-app-url="${htmlEscape(kakaoApp)}" data-android-intent="${htmlEscape(kakaoIntent)}" aria-label="使用Kakao Map导航到${htmlEscape(place.name)}">KAKAO 导航</a><a class="map-link" href="${htmlEscape(naverWeb)}" target="_blank" rel="noopener" data-map-app="Naver Map" data-app-url="${htmlEscape(naverApp)}" data-android-intent="${htmlEscape(naverIntent)}" aria-label="使用Naver Map导航到${htmlEscape(place.name)}">NAVER 导航</a></div>`;
   }
 
   function isMobileDevice() {
@@ -245,11 +255,11 @@
 
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("pagehide", stopFallback, { once: true });
-    showMapStatus(`正在打开 ${appName}…`);
+    showMapStatus(`正在打开 ${appName} 路线…`);
     fallbackTimer = window.setTimeout(function () {
       stopFallback();
       if (document.hidden) return;
-      showMapStatus(`未检测到 ${appName}，正在打开网页版`);
+      showMapStatus(`未检测到 ${appName}，正在打开网页版路线`);
       window.location.href = fallbackUrl;
     }, 1200);
     window.location.href = launchUrl;
@@ -300,7 +310,7 @@
   function renderTimeline(day) {
     return `<div class="section-heading" data-section="timeline"><div><p class="section-kicker">TIMELINE</p><h2>时间与交通</h2></div><span>${day.timeline.length} 个节点</span></div><div class="timeline">${day.timeline.map(function (item) {
       const place = item.place ? places[item.place] : null;
-      return `<article class="timeline-item"><time class="timeline-time">${htmlEscape(item.time)}</time><div class="timeline-card"><div class="timeline-top"><h3>${htmlEscape(item.title)}</h3><span class="type-tag ${item.risk ? "risk" : (item.type === "徒步" ? "walk" : "")}">${htmlEscape(item.type)}</span></div><p>${htmlEscape(item.detail)}</p>${place ? `<p class="place-address"><b>${htmlEscape(place.korean)}</b> · ${htmlEscape(place.address)}</p>${mapLinks(item.place)}` : ""}</div></article>`;
+      return `<article class="timeline-item"><time class="timeline-time">${htmlEscape(item.time)}</time><div class="timeline-card"><div class="timeline-top"><h3>${htmlEscape(item.title)}</h3><span class="type-tag ${item.risk ? "risk" : (item.type === "徒步" ? "walk" : "")}">${htmlEscape(item.type)}</span></div><p>${htmlEscape(item.detail)}</p>${place ? `<p class="place-address"><b>${htmlEscape(place.korean)}</b> · ${htmlEscape(place.address)}</p>${mapLinks(item.place, item.type + " " + item.title)}` : ""}</div></article>`;
     }).join("")}</div>`;
   }
 
@@ -308,7 +318,7 @@
     const dayDistance = day.walkKm + (day.bikeKm || 0);
     const hotel = day.hotel ? places[day.hotel] : null;
     const dayNumber = String(days.findIndex(function (item) { return item.id === day.id; }) + 1).padStart(2, "0");
-    return `<article class="${printMode ? "print-day" : "active-day"}" data-rendered-day="${day.id}" data-section="day"><header class="day-heading"><div><p class="day-meta"><span>DAY ${dayNumber} / ${String(days.length).padStart(2, "0")}</span><span>${htmlEscape(day.weekday)} · ${htmlEscape(day.date)}</span></p><h2>${htmlEscape(day.label)}</h2><p>${htmlEscape(day.lead)}</p></div><div class="distance-stamp">${dayDistance.toFixed(1)}<small>${day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK"}</small></div></header><section class="next-move" aria-label="下一步交通"><time class="time">${htmlEscape(day.next.time)}</time><div><span class="next-label">NEXT</span><strong>${htmlEscape(day.next.title)}</strong><p>${htmlEscape(day.next.detail)}</p>${mapLinks(day.next.place)}</div><span class="mode">${htmlEscape(day.next.mode)}</span></section>${renderTimeline(day)}${day.cutoff ? `<section class="cutoff-box"><strong>硬截止 · ${htmlEscape(day.cutoff)}</strong><p>${htmlEscape(day.fallback)}</p><label class="fallback-control"><input type="checkbox" data-fallback="${day.id}" ${state.fallbacks[day.id] ? "checked" : ""}><span>${state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案"}</span></label></section>` : ""}${renderStampRows(day)}${hotel ? `<div class="section-heading"><div><p class="section-kicker">STAY</p><h2>今晚住宿</h2></div></div><section class="hotel-strip"><div><h3>${htmlEscape(hotel.name)}</h3><p><b>${htmlEscape(hotel.korean)}</b> · ${htmlEscape(hotel.address)}</p></div>${mapLinks(day.hotel)}</section>` : ""}<div class="section-heading"><div><p class="section-kicker">NOTES</p><h2>当天备注</h2></div><span>自动保存</span></div><textarea class="day-notes" data-day-note="${day.id}" rows="4" placeholder="记录天气、班次、身体状态和临时变更……">${htmlEscape(state.dayNotes[day.id] || "")}</textarea></article>`;
+    return `<article class="${printMode ? "print-day" : "active-day"}" data-rendered-day="${day.id}" data-section="day"><header class="day-heading"><div><p class="day-meta"><span>DAY ${dayNumber} / ${String(days.length).padStart(2, "0")}</span><span>${htmlEscape(day.weekday)} · ${htmlEscape(day.date)}</span></p><h2>${htmlEscape(day.label)}</h2><p>${htmlEscape(day.lead)}</p></div><div class="distance-stamp">${dayDistance.toFixed(1)}<small>${day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK"}</small></div></header><section class="next-move" aria-label="下一步交通"><time class="time">${htmlEscape(day.next.time)}</time><div><span class="next-label">NEXT</span><strong>${htmlEscape(day.next.title)}</strong><p>${htmlEscape(day.next.detail)}</p>${mapLinks(day.next.place, day.next.mode + " " + day.next.title)}</div><span class="mode">${htmlEscape(day.next.mode)}</span></section>${renderTimeline(day)}${day.cutoff ? `<section class="cutoff-box"><strong>硬截止 · ${htmlEscape(day.cutoff)}</strong><p>${htmlEscape(day.fallback)}</p><label class="fallback-control"><input type="checkbox" data-fallback="${day.id}" ${state.fallbacks[day.id] ? "checked" : ""}><span>${state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案"}</span></label></section>` : ""}${renderStampRows(day)}${hotel ? `<div class="section-heading"><div><p class="section-kicker">STAY</p><h2>今晚住宿</h2></div></div><section class="hotel-strip"><div><h3>${htmlEscape(hotel.name)}</h3><p><b>${htmlEscape(hotel.korean)}</b> · ${htmlEscape(hotel.address)}</p></div>${mapLinks(day.hotel, "步行")}</section>` : ""}<div class="section-heading"><div><p class="section-kicker">NOTES</p><h2>当天备注</h2></div><span>自动保存</span></div><textarea class="day-notes" data-day-note="${day.id}" rows="4" placeholder="记录天气、班次、身体状态和临时变更……">${htmlEscape(state.dayNotes[day.id] || "")}</textarea></article>`;
   }
 
   function renderActiveDay() {
@@ -362,7 +372,7 @@
 
   function renderCertificate() {
     const km = completedKm();
-    document.getElementById("certificate-panel").innerHTML = `<div class="certificate-top"><div><p class="section-kicker">CERTIFICATE</p><h2>100 km 证书</h2></div><div class="certificate-seal">${km >= 100 ? "READY" : km.toFixed(1)}<small>${km >= 100 ? "100 KM" : "KM"}</small></div></div><p>9月28日在摹瑟浦运动场官方服务点办理。纸质护照与电子护照不可混用。</p><ul class="rail-list"><li><span>服务时间</span><strong>08:30–17:00</strong></li><li><span>午休</span><strong>12:00–13:00</strong></li><li><span>停航后里程</span><strong>102.1 km</strong></li></ul>${mapLinks("hamo")}`;
+    document.getElementById("certificate-panel").innerHTML = `<div class="certificate-top"><div><p class="section-kicker">CERTIFICATE</p><h2>100 km 证书</h2></div><div class="certificate-seal">${km >= 100 ? "READY" : km.toFixed(1)}<small>${km >= 100 ? "100 KM" : "KM"}</small></div></div><p>9月28日在摹瑟浦运动场官方服务点办理。纸质护照与电子护照不可混用。</p><ul class="rail-list"><li><span>服务时间</span><strong>08:30–17:00</strong></li><li><span>午休</span><strong>12:00–13:00</strong></li><li><span>停航后里程</span><strong>102.1 km</strong></li></ul>${mapLinks("hamo", "步行")}`;
   }
 
   function renderQuickLinks() {
