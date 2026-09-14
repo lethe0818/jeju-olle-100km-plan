@@ -128,13 +128,14 @@
         { routeId: "10-1", stamps: ["start", "middle", "end"], note: "完成三章" }
       ],
       lead: "清晨续走10号线剩余4.2 km，达到102.1 km后先领证，再搭10:00船去加波岛。",
-      next: { time: "05:45", title: "Amantov Pension → 10号线中间章", detail: "打车约20–30分钟，回到Seotal Oreum停车场亭子续走", mode: "TAXI", place: "seotal" },
+      next: { time: "06:30", title: "起床，整理行李准备退房", detail: "简单早餐并完成整理，07:00准时退房", mode: "WAKE", place: "amantov" },
       timeline: [
-        { time: "05:45", title: "退房，打车返回中间章", detail: "携带全部行李，回到前一日停止点。", type: "打车", place: "seotal" },
-        { time: "06:20", title: "续走10号线 · Seotal Oreum → 摹瑟浦", detail: "剩余约4.2 km，目标1–1.5小时；抵达后盖10号线终点章。", type: "徒步", place: "seotal" },
-        { time: "07:50", title: "抵达摹瑟浦运动场", detail: "至此认证步行约102.1 km，等待服务点08:30开门。", type: "到达", place: "hamo" },
-        { time: "08:30", title: "领取100 km证书", detail: "先用已完成的路线办理证书，不需要等待加波岛10-1计入。", type: "证书", place: "hamo" },
-        { time: "08:55", title: "摹瑟浦运动场 → 云津港", detail: "打车约5–10分钟，确保预订乘客在09:20前完成取票。", type: "打车", place: "unjin" },
+        { time: "06:30", title: "起床、早餐与整理行李", detail: "早餐从简，全部行李在07:00前整理完成。", type: "准备", place: "amantov" },
+        { time: "07:00", title: "退房，打车返回中间章", detail: "携带全部行李；车程约20–30分钟，回到前一日停止点。", type: "打车", place: "seotal" },
+        { time: "07:25", title: "续走10号线 · Seotal Oreum → 摹瑟浦", detail: "剩余约4.2 km，快走目标约1小时10分钟；抵达后盖10号线终点章。", type: "徒步", place: "seotal" },
+        { time: "08:35", title: "抵达摹瑟浦运动场", detail: "至此认证步行约102.1 km；服务点已于08:30开放。", type: "到达", place: "hamo" },
+        { time: "08:40", title: "领取100 km证书", detail: "无排队时先办理；若抵达较晚或需要等待，改为返港后领取。", type: "证书", place: "hamo" },
+        { time: "09:00", title: "摹瑟浦运动场 → 云津港", detail: "打车约5–10分钟，目标09:10抵达，最迟09:20前完成取票。", type: "打车", place: "unjin" },
         { time: "10:00", title: "乘船前往加波岛", detail: "约10分钟抵达；返程时间以往返订单为准，优先选择12:20返港组合。", type: "船班", place: "gapado" },
         { time: "10:20", title: "10-1 号线 · 加波岛环线", detail: "4.2 km，预计1–1.5小时；完成起点、中间、终点章。", type: "徒步", place: "gapado" },
         { time: "12:20", title: "乘船返回云津港", detail: "具体返程由订票班次绑定；若需等待，仍保留充足机场余量。", type: "船班", place: "unjin" },
@@ -142,7 +143,7 @@
         { time: "15:00", title: "抵达济州机场", detail: "距离22:40起飞有充足余量，可在机场休整和用餐。", type: "航班", place: "airport" },
         { time: "22:40", title: "离开济州岛", detail: "结束本次偶来小路行程。", type: "航班", place: "airport" }
       ],
-      cutoff: "08:30后才走完10号线则先去云津港，证书改在返港并等到13:00午休结束后办理；09:00仍未走完则取消加波岛。",
+      cutoff: "08:45后才走完10号线就跳过上午领证，直接去云津港；证书改在返港并等到13:00午休结束后办理。09:00仍未走完则取消加波岛。",
       fallback: "加波岛停航：完成10号线并领取证书后直接去机场。若前日没到中间章：取消加波岛，清晨从和顺完整走完10号线。",
       hotel: null
     }
