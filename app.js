@@ -25,7 +25,28 @@
     seotal: { name: "Seotal Oreum停车场亭子", korean: "섯알오름 주차장 정자", address: "제주특별자치도 서귀포시 대정읍 상모리 1590-3", lat: 33.2055144, lng: 126.27982 },
     hamo: { name: "摹瑟浦运动场", korean: "하모체육공원", address: "제주특별자치도 서귀포시 대정읍 최남단해안로29번길 14", lat: 33.218616, lng: 126.2524507 },
     unjin: { name: "云津港", korean: "운진항", address: "제주특별자치도 서귀포시 대정읍 최남단해안로 120", lat: 33.2096928, lng: 126.2591594 },
-    gapado: { name: "加波岛上洞浦口", korean: "가파도 상동포구", address: "제주특별자치도 서귀포시 대정읍 가파리", lat: 33.16974, lng: 126.27136 }
+    gapado: { name: "加波岛上洞浦口", korean: "가파도 상동포구", address: "제주특별자치도 서귀포시 대정읍 가파리", lat: 33.16974, lng: 126.27136 },
+    manjo: { name: "Manjo Icheon 米饭 · 济州城山店", korean: "만조이천쌀밥 제주성산점", address: "제주 서귀포시 성산읍 성산중앙로 5", lat: 33.460901, lng: 126.9311815 },
+    seomSonai: { name: "Seom Sonai 牛岛本店", korean: "섬소나이 우도본점", address: "제주 제주시 우도면 우도해안길 814", lat: 33.513337, lng: 126.9575652 },
+    ojeong: { name: "Ojeong紫菜包饭", korean: "오는정김밥", address: "제주 서귀포시 동문동로 2 1층", lat: 33.2496637, lng: 126.5675976 },
+    angeori: { name: "Angeori Bangeori", korean: "안거리밖거리", address: "제주 서귀포시 솔동산로 6-1", lat: 33.2442633, lng: 126.5641048 },
+    chunsim: { name: "Chunsim's 总店", korean: "춘심이네 본점", address: "제주 서귀포시 안덕면 창천중앙로24번길 16", lat: 33.2645164, lng: 126.370493 }
+  };
+
+  const foodStops = {
+    "0924": [
+      { id: "manjo", place: "manjo", priority: "首选晚餐", slot: "牛岛返航后 · 18:00–19:00", dish: "돌솥정식 · 石锅米饭定食", note: "这家店在城山，不在牛岛上。当前页面显示 09:30–20:00、15:00–17:00 休息、19:00 最后点单；中秋营业务必前一晚复核。", mode: "公交" },
+      { id: "seom-sonai", place: "seomSonai", priority: "骑行备选", slot: "1-1 号线途中 · 最多停留 25 分钟", dish: "해물짬뽕 · 海鲜辣汤面", note: "只有骑行进度领先时再去；15:30 后仍未到店就跳过，不能影响 17:10 还车。", mode: "骑行" }
+    ],
+    "0925": [
+      { id: "ojeong", place: "ojeong", priority: "入住后", slot: "15:15 后 · Kenny Stay 附近", dish: "오는정김밥 · 招牌紫菜包饭", note: "热门取餐店，建议到西归浦前先电话确认当日营业和可取餐时间，不为排队耽误次日休息。", mode: "步行" }
+    ],
+    "0926": [
+      { id: "angeori", place: "angeori", priority: "恢复晚餐", slot: "完成 7-1 后 · 旅行者中心附近", dish: "옥돔정식 · 玉鲷家常定食", note: "适合长距离徒步后的正餐；先回酒店洗漱还是直接用餐，按当天体力和营业状态决定。", mode: "步行" }
+    ],
+    "0927": [
+      { id: "chunsim", place: "chunsim", priority: "可选晚餐", slot: "返回民宿后 · 打车约 10 分钟", dish: "통갈치구이 · 整条烤带鱼", note: "偏多人分享菜，一个人用餐先确认是否有合适份量；不要为了餐厅延长当天徒步。", mode: "打车" }
+    ]
   };
 
   const routes = {
@@ -160,7 +181,7 @@
     return key;
   }
 
-  const defaults = { version: 3, activeDay: initialDayId(), theme: "timeline", compact: false, reducedMotion: false, notes: "", dayNotes: {}, stamps: {}, fallbacks: {} };
+  const defaults = { version: 3, activeDay: initialDayId(), theme: "timeline", compact: false, reducedMotion: false, notes: "", dayNotes: {}, stamps: {}, foodChecks: {}, fallbacks: {} };
   let state = loadState();
   let printRestoreDay = null;
 
@@ -314,11 +335,21 @@
     }).join("")}</div>`;
   }
 
+  function renderFoodStops(day) {
+    const stops = foodStops[day.id] || [];
+    if (!stops.length) return "";
+    const checked = stops.filter(function (stop) { return state.foodChecks[stop.id]; }).length;
+    return `<div class="section-heading" data-section="food"><div><p class="section-kicker">TASTE OF JEJU</p><h2>顺路美食</h2></div><span>${checked} / ${stops.length} 已打卡</span></div><div class="food-list">${stops.map(function (stop) {
+      const place = places[stop.place];
+      return `<article class="food-stop"><div class="food-stop-top"><div><span class="food-priority">${htmlEscape(stop.priority)}</span><h3>${htmlEscape(place.name)}</h3><p class="food-korean">${htmlEscape(place.korean)}</p></div><label class="food-check"><input type="checkbox" data-food-check="${stop.id}" ${state.foodChecks[stop.id] ? "checked" : ""}><span>${state.foodChecks[stop.id] ? "已打卡" : "打卡"}</span></label></div><dl class="food-facts"><div><dt>推荐</dt><dd>${htmlEscape(stop.dish)}</dd></div><div><dt>时段</dt><dd>${htmlEscape(stop.slot)}</dd></div></dl><p class="food-note">${htmlEscape(stop.note)}</p><p class="place-address"><b>${htmlEscape(place.korean)}</b> · ${htmlEscape(place.address)}</p>${mapLinks(stop.place, stop.mode)}</article>`;
+    }).join("")}</div>`;
+  }
+
   function renderDay(day, printMode) {
     const dayDistance = day.walkKm + (day.bikeKm || 0);
     const hotel = day.hotel ? places[day.hotel] : null;
     const dayNumber = String(days.findIndex(function (item) { return item.id === day.id; }) + 1).padStart(2, "0");
-    return `<article class="${printMode ? "print-day" : "active-day"}" data-rendered-day="${day.id}" data-section="day"><header class="day-heading"><div><p class="day-meta"><span>DAY ${dayNumber} / ${String(days.length).padStart(2, "0")}</span><span>${htmlEscape(day.weekday)} · ${htmlEscape(day.date)}</span></p><h2>${htmlEscape(day.label)}</h2><p>${htmlEscape(day.lead)}</p></div><div class="distance-stamp">${dayDistance.toFixed(1)}<small>${day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK"}</small></div></header><section class="next-move" aria-label="下一步交通"><time class="time">${htmlEscape(day.next.time)}</time><div><span class="next-label">NEXT</span><strong>${htmlEscape(day.next.title)}</strong><p>${htmlEscape(day.next.detail)}</p>${mapLinks(day.next.place, day.next.mode + " " + day.next.title)}</div><span class="mode">${htmlEscape(day.next.mode)}</span></section>${renderTimeline(day)}${day.cutoff ? `<section class="cutoff-box"><strong>硬截止 · ${htmlEscape(day.cutoff)}</strong><p>${htmlEscape(day.fallback)}</p><label class="fallback-control"><input type="checkbox" data-fallback="${day.id}" ${state.fallbacks[day.id] ? "checked" : ""}><span>${state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案"}</span></label></section>` : ""}${renderStampRows(day)}${hotel ? `<div class="section-heading"><div><p class="section-kicker">STAY</p><h2>今晚住宿</h2></div></div><section class="hotel-strip"><div><h3>${htmlEscape(hotel.name)}</h3><p><b>${htmlEscape(hotel.korean)}</b> · ${htmlEscape(hotel.address)}</p></div>${mapLinks(day.hotel, "步行")}</section>` : ""}<div class="section-heading"><div><p class="section-kicker">NOTES</p><h2>当天备注</h2></div><span>自动保存</span></div><textarea class="day-notes" data-day-note="${day.id}" rows="4" placeholder="记录天气、班次、身体状态和临时变更……">${htmlEscape(state.dayNotes[day.id] || "")}</textarea></article>`;
+    return `<article class="${printMode ? "print-day" : "active-day"}" data-rendered-day="${day.id}" data-section="day"><header class="day-heading"><div><p class="day-meta"><span>DAY ${dayNumber} / ${String(days.length).padStart(2, "0")}</span><span>${htmlEscape(day.weekday)} · ${htmlEscape(day.date)}</span></p><h2>${htmlEscape(day.label)}</h2><p>${htmlEscape(day.lead)}</p></div><div class="distance-stamp">${dayDistance.toFixed(1)}<small>${day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK"}</small></div></header><section class="next-move" aria-label="下一步交通"><time class="time">${htmlEscape(day.next.time)}</time><div><span class="next-label">NEXT</span><strong>${htmlEscape(day.next.title)}</strong><p>${htmlEscape(day.next.detail)}</p>${mapLinks(day.next.place, day.next.mode + " " + day.next.title)}</div><span class="mode">${htmlEscape(day.next.mode)}</span></section>${renderTimeline(day)}${day.cutoff ? `<section class="cutoff-box"><strong>硬截止 · ${htmlEscape(day.cutoff)}</strong><p>${htmlEscape(day.fallback)}</p><label class="fallback-control"><input type="checkbox" data-fallback="${day.id}" ${state.fallbacks[day.id] ? "checked" : ""}><span>${state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案"}</span></label></section>` : ""}${renderStampRows(day)}${renderFoodStops(day)}${hotel ? `<div class="section-heading"><div><p class="section-kicker">STAY</p><h2>今晚住宿</h2></div></div><section class="hotel-strip"><div><h3>${htmlEscape(hotel.name)}</h3><p><b>${htmlEscape(hotel.korean)}</b> · ${htmlEscape(hotel.address)}</p></div>${mapLinks(day.hotel, "步行")}</section>` : ""}<div class="section-heading"><div><p class="section-kicker">NOTES</p><h2>当天备注</h2></div><span>自动保存</span></div><textarea class="day-notes" data-day-note="${day.id}" rows="4" placeholder="记录天气、班次、身体状态和临时变更……">${htmlEscape(state.dayNotes[day.id] || "")}</textarea></article>`;
   }
 
   function renderActiveDay() {
@@ -413,6 +444,7 @@
     });
     document.addEventListener("change", function (event) {
       if (event.target.matches("[data-stamp]")) { state.stamps[event.target.dataset.stamp] = event.target.checked; saveState(); renderSummary(); renderCertificate(); }
+      if (event.target.matches("[data-food-check]")) { state.foodChecks[event.target.dataset.foodCheck] = event.target.checked; saveState(); renderActiveDay(); }
       if (event.target.matches("[data-fallback]")) { state.fallbacks[event.target.dataset.fallback] = event.target.checked; saveState(); renderActiveDay(); }
     });
     document.addEventListener("input", function (event) { if (event.target.matches("[data-day-note]")) { state.dayNotes[event.target.dataset.dayNote] = event.target.value; saveState(); } });
