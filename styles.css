@@ -1017,11 +1017,11 @@ body[data-execution-focus="true"] .today-shell { padding-top: 14px; }
 .category-picker input:checked + span { border-color: var(--ocean-deep); color: white; background: var(--ocean-deep); }
 .category-picker input:checked + span img { filter: brightness(0) invert(1); opacity: 1; }
 .expense-category-picker span { min-height: 44px; }
-.currency-picker { min-width: 0; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); overflow: hidden; }
+.currency-picker { min-width: 0; height: 46px; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); overflow: hidden; }
 .currency-picker legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .currency-picker label { min-width: 0; cursor: pointer; }
 .currency-picker input { position: absolute; opacity: 0; pointer-events: none; }
-.currency-picker span { min-height: 44px; display: grid; place-content: center; color: var(--muted); background: var(--surface); font-size: 11px; font-weight: 750; }
+.currency-picker span { min-height: 44px; height: 100%; display: grid; place-content: center; color: var(--muted); background: var(--surface); font-size: 11px; font-weight: 750; }
 .currency-picker label + label span { border-left: 1px solid var(--line); }
 .currency-picker input:checked + span { color: white; background: var(--ocean-deep); }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

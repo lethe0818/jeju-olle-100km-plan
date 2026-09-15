@@ -507,6 +507,37 @@ test("expense import validation preserves earlier version 4 data", async ({ brow
   await context.close();
 });
 
+test("expense currency choices align with the amount input at phone and tablet widths", async ({ page }) => {
+  await page.setViewportSize({ width: 628, height: 1272 });
+  await page.goto(url);
+  await page.locator("[data-open-quick-add]").click();
+  await page.locator("[data-quick-expense]").click();
+  await expect(page.locator("#expense-form .currency-field > span")).toBeVisible();
+
+  await page.waitForTimeout(260);
+  for (const width of [628, 390, 768]) {
+    await page.setViewportSize({ width, height: width === 628 ? 1272 : width === 390 ? 844 : 900 });
+    const boxes = await page.evaluate(() => {
+      const rect = selector => document.querySelector(selector).getBoundingClientRect();
+      return {
+        amount: rect("#expense-amount"),
+        picker: rect("#expense-form .currency-picker"),
+        choices: [...document.querySelectorAll("#expense-form .currency-picker label span")].map(node => node.getBoundingClientRect())
+      };
+    });
+    expect(Math.abs(boxes.amount.top - boxes.picker.top)).toBeLessThanOrEqual(1);
+    expect(Math.abs(boxes.amount.bottom - boxes.picker.bottom)).toBeLessThanOrEqual(1);
+    for (const choice of boxes.choices) {
+      expect(choice.height).toBeGreaterThanOrEqual(44);
+      expect(Math.abs(choice.bottom - boxes.picker.bottom)).toBeLessThanOrEqual(2);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    if (width !== 768) await page.screenshot({ path: `test-results/currency-aligned-${width}.png` });
+  }
+  await page.locator('input[name="currency"][value="CNY"] + span').click();
+  await expect(page.locator('input[name="currency"][value="CNY"]')).toBeChecked();
+});
+
 test("walk mode advances manually, resumes, goes back, finishes and reopens", async ({ page }) => {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -902,7 +933,7 @@ test("GitHub Pages subdirectory keeps install scope and offline walk-mode state"
     });
     expect(config.scope).toBe(subpathUrl);
     expect(config.start).toBe(subpathUrl);
-    expect(config.caches).toContain("jeju-olle-app-v5-ux-20260915-10");
+    expect(config.caches).toContain("jeju-olle-app-v5-ux-20260915-11");
     await page.locator('#view-today [data-day="0924"]').click();
     await page.locator("[data-start-execution='0924']").click();
     await context.setOffline(true);

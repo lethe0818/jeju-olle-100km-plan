@@ -122,11 +122,14 @@
       <div class="form-grid">
         <label class="field span-2"><span>项目 <b>*</b></span><input id="expense-title" name="title" required maxlength="120" autocomplete="off" placeholder="例如：机场到酒店出租车"></label>
         <label class="field"><span>金额 <b>*</b></span><input id="expense-amount" name="amount" required inputmode="decimal" autocomplete="off" placeholder="0"></label>
-        <fieldset class="currency-picker">
-          <legend>币种</legend>
-          <label><input type="radio" name="currency" value="KRW" checked><span>₩ 韩元</span></label>
-          <label><input type="radio" name="currency" value="CNY"><span>¥ 人民币</span></label>
-        </fieldset>
+        <div class="field currency-field">
+          <span aria-hidden="true">币种</span>
+          <fieldset class="currency-picker">
+            <legend>币种</legend>
+            <label><input type="radio" name="currency" value="KRW" checked><span>₩ 韩元</span></label>
+            <label><input type="radio" name="currency" value="CNY"><span>¥ 人民币</span></label>
+          </fieldset>
+        </div>
         <label class="field"><span>日期 <b>*</b></span><select id="expense-day" name="dayId" required></select></label>
         <label class="field"><span>付款方式</span><select id="expense-payment" name="payment"><option value="card">银行卡</option><option value="cash">现金</option><option value="alipay">支付宝</option><option value="wechat">微信</option><option value="other">其他</option></select></label>
         <label class="field span-2"><span>备注</span><textarea id="expense-note" name="note" rows="3" maxlength="500" placeholder="同行分摊、票据或其他说明"></textarea></label>

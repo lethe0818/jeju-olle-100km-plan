@@ -1,4 +1,4 @@
-const CACHE_NAME = "jeju-olle-app-v5-ux-20260915-10";
+const CACHE_NAME = "jeju-olle-app-v5-ux-20260915-11";
 const APP_SHELL = [
   "./",
   "./index.html",
