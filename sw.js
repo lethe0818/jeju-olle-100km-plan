@@ -1,4 +1,4 @@
-const CACHE_NAME = "jeju-olle-app-v4-route-guides-collapsed-20260915-6";
+const CACHE_NAME = "jeju-olle-app-v4-white-next-map-buttons-20260915-7";
 const APP_SHELL = [
   "./",
   "./index.html",

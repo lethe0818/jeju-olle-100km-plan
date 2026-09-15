@@ -246,7 +246,9 @@ img { display: block; max-width: 100%; }
 .next-card p { position: relative; z-index: 1; max-width: 590px; margin: 0; color: rgba(255,255,255,.72); font-size: 13px; text-wrap: pretty; }
 .mode-badge { align-self: start; padding: 5px 8px; border: 1px solid rgba(255,255,255,.3); border-radius: 4px; color: rgba(255,255,255,.8); font: 750 10px var(--mono); }
 .next-card .map-actions { position: relative; z-index: 1; }
-.next-card .map-button { color: white; border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.08); }
+.next-card .map-button { color: var(--ocean-deep); border-color: var(--surface); background: var(--surface); }
+.next-card .map-button:hover { border-color: var(--paper); background: var(--paper); }
+.next-card .map-button.disabled { color: var(--muted); border-color: var(--line); background: var(--surface); }
 
 .section-heading {
   margin: 28px 0 11px;

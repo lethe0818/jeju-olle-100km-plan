@@ -35,6 +35,28 @@ async function waitForAppWorker(page) {
 test.beforeAll(async () => { testServer = await startStaticServer(4183); });
 test.afterAll(async () => { await closeServer(testServer); });
 
+test("next-action map buttons are white and legible on mobile and desktop", async ({ page }) => {
+  await page.goto(url);
+  await page.locator('#view-today [data-day="0924"]').click();
+  for (const width of [390, 769, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const buttons = page.locator("#today-content .next-card .map-button");
+    await expect(buttons).toHaveCount(2);
+    for (const button of await buttons.all()) {
+      await expect(button).toBeVisible();
+      const appearance = await button.evaluate(element => {
+        const style = getComputedStyle(element);
+        return { background: style.backgroundColor, color: style.color, height: element.getBoundingClientRect().height };
+      });
+      expect(appearance.background).toBe("rgb(255, 255, 255)");
+      expect(appearance.color).toBe("rgb(7, 63, 67)");
+      expect(appearance.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    if (width !== 1440) await page.screenshot({ path: `test-results/next-card-white-buttons-${width}.png` });
+  }
+});
+
 test("route features and scenic check-ins stay in walking order and share progress", async ({ page }) => {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
