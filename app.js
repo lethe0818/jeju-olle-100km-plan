@@ -1,226 +1,166 @@
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "jeju-olle-plan-v3";
-  const trip = { plannedWalkKm: 106.3, plannedBikeKm: 13.2 };
-
-  const places = {
-    airport: { name: "济州国际机场", korean: "제주국제공항", address: "제주특별자치도 제주시 공항로 2", lat: 33.5070711, lng: 126.4916441 },
-    newStar: { name: "New Star Hotel", korean: "뉴 스타 호텔", address: "제주특별자치도 제주시 서사로 102", lat: 33.5032906, lng: 126.5196238 },
-    jejuTerminal: { name: "济州客运站", korean: "제주버스터미널", address: "제주특별자치도 제주시 서광로 174", lat: 33.49919, lng: 126.516324 },
-    siheung: { name: "始兴里 · 1号线起点", korean: "시흥리 제주올레 1코스 시작점", address: "제주특별자치도 서귀포시 성산읍 시흥리", lat: 33.47098, lng: 126.88892 },
-    gwangchigi: { name: "广峙其海边", korean: "광치기해변", address: "제주특별자치도 서귀포시 성산읍 고성리", lat: 33.4537662, lng: 126.9255233 },
-    seongsanPort: { name: "城山港客运码头", korean: "성산포항 종합여객터미널", address: "제주특별자치도 서귀포시 성산읍 성산등용로 112-7", lat: 33.4719127, lng: 126.9331048 },
-    udo: { name: "牛岛天津港", korean: "우도 천진항", address: "제주특별자치도 제주시 우도면 연평리", lat: 33.492818, lng: 126.9516017 },
-    playce: { name: "Playce Camp Jeju", korean: "플레이스캠프 제주", address: "제주특별자치도 서귀포시 성산읍 동류암로 20", lat: 33.4498936, lng: 126.9187505 },
-    namwon: { name: "南元浦口", korean: "남원포구", address: "제주특별자치도 서귀포시 남원읍 남태해안로", lat: 33.2778081, lng: 126.7195669 },
-    soesokkak: { name: "牛沼河口", korean: "쇠소깍", address: "제주특별자치도 서귀포시 쇠소깍로 104", lat: 33.2525937, lng: 126.6234661 },
-    traveler: { name: "济州偶来旅行者中心", korean: "제주올레 여행자센터", address: "제주특별자치도 서귀포시 중정로 22", lat: 33.2473863, lng: 126.5586387 },
-    kenny: { name: "Kenny Stay Jeju Seogwipo", korean: "케니 스테이 제주 서귀포", address: "제주특별자치도 서귀포시 동문로 42", lat: 33.2500953, lng: 126.5649706 },
-    seogwipoTerminal: { name: "西归浦客运站", korean: "서귀포버스터미널", address: "제주특별자치도 서귀포시 일주동로 9217", lat: 33.248726, lng: 126.508138 },
-    wolpyeong: { name: "月坪偶来起点", korean: "월평아왜낭목 쉼터", address: "제주특별자치도 서귀포시 월평동", lat: 33.2463149, lng: 126.4607759 },
-    daepyeong: { name: "大坪浦口", korean: "대평포구", address: "제주특별자치도 서귀포시 안덕면 창천리", lat: 33.2371271, lng: 126.3617071 },
-    amantov: { name: "Amantov Pension", korean: "아만토브 펜션", address: "제주특별자치도 서귀포시 예래로 446", lat: 33.2357195, lng: 126.3703987 },
-    hwasun: { name: "和顺金沙滩", korean: "화순금모래해수욕장", address: "제주특별자치도 서귀포시 안덕면 화순해안로 69", lat: 33.2403903, lng: 126.3331684 },
-    seotal: { name: "Seotal Oreum停车场亭子", korean: "섯알오름 주차장 정자", address: "제주특별자치도 서귀포시 대정읍 상모리 1590-3", lat: 33.2055144, lng: 126.27982 },
-    hamo: { name: "摹瑟浦运动场", korean: "하모체육공원", address: "제주특별자치도 서귀포시 대정읍 최남단해안로29번길 14", lat: 33.218616, lng: 126.2524507 },
-    unjin: { name: "云津港", korean: "운진항", address: "제주특별자치도 서귀포시 대정읍 최남단해안로 120", lat: 33.2096928, lng: 126.2591594 },
-    gapado: { name: "加波岛上洞浦口", korean: "가파도 상동포구", address: "제주특별자치도 서귀포시 대정읍 가파리", lat: 33.16974, lng: 126.27136 },
-    manjo: { name: "Manjo Icheon 米饭 · 济州城山店", korean: "만조이천쌀밥 제주성산점", address: "제주 서귀포시 성산읍 성산중앙로 5", lat: 33.460901, lng: 126.9311815 },
-    seomSonai: { name: "Seom Sonai 牛岛本店", korean: "섬소나이 우도본점", address: "제주 제주시 우도면 우도해안길 814", lat: 33.513337, lng: 126.9575652 },
-    cafeSalle: { name: "Cafe Salle", korean: "카페살레", address: "제주 제주시 우도면 우도해안길 816 1,2층", lat: 33.5131314, lng: 126.9577602 },
-    cafeTheLight: { name: "Cafe The Light", korean: "카페더라이트", address: "제주 서귀포시 성산읍 한도로 269", lat: 33.465664, lng: 126.9359915 },
-    ojeong: { name: "Ojeong紫菜包饭", korean: "오는정김밥", address: "제주 서귀포시 동문동로 2 1층", lat: 33.2496637, lng: 126.5675976 },
-    halmeoniTteok: { name: "奶奶年糕店", korean: "할머니떡집", address: "제주 서귀포시 중앙로42번길 24", lat: 33.2485738, lng: 126.5641503 },
-    angeori: { name: "Angeori Bangeori", korean: "안거리밖거리", address: "제주 서귀포시 솔동산로 6-1", lat: 33.2442633, lng: 126.5641048 },
-    chunsim: { name: "Chunsim's 总店", korean: "춘심이네 본점", address: "제주 서귀포시 안덕면 창천중앙로24번길 16", lat: 33.2645164, lng: 126.370493 },
-    hodoBakery: { name: "Hodo Bakery", korean: "호도제과", address: "제주 서귀포시 안덕면 화순로 132", lat: 33.2465429, lng: 126.3322486 },
-    miyeong: { name: "Miyeongine 生鱼片餐厅", korean: "미영이네", address: "제주 서귀포시 대정읍 하모항구로 42", lat: 33.217709, lng: 126.2497839 }
-  };
-
-  const foodStops = {
-    "0924": [
-      { id: "cafe-the-light", place: "cafeTheLight", priority: "冠军咖啡", slot: "1 号线结束后 · 最迟 12:40 离店", dish: "스페셜티 커피 · 精品咖啡", note: "按“约十年历史、韩国拉花冠军”线索匹配到此店；实际位于1号线终点城山一带，并非始兴里起点。只适合外带，线路延误就跳过。", mode: "步行" },
-      { id: "cafe-salle", place: "cafeSalle", priority: "甜品打卡", slot: "1-1 号线途中 · 停留 15–20 分钟", dish: "우도땅콩쿠키 · 牛岛花生曲奇", note: "位于牛岛海岸路 816 号，与 Seom Sonai 相邻。经过时顺路购买即可，最迟 16:10 离店，营业状态当天确认。", mode: "骑行" },
-      { id: "seom-sonai", place: "seomSonai", priority: "骑行备选", slot: "与 Cafe Salle 二选一 · 最多 25 分钟", dish: "해물짬뽕 · 海鲜辣汤面", note: "只有骑行进度领先时再安排正餐；不要与甜品店都久坐，不能影响 17:10 还车。", mode: "骑行" },
-      { id: "manjo", place: "manjo", priority: "首选晚餐", slot: "牛岛返航后 · 18:00–19:00", dish: "돌솥정식 · 石锅米饭定食", note: "这家店在城山，不在牛岛上。当前页面显示 09:30–20:00、15:00–17:00 休息、19:00 最后点单；中秋营业务必前一晚复核。", mode: "公交" }
-    ],
-    "0925": [
-      { id: "halmeoni-tteok", place: "halmeoniTteok", priority: "市场甜点", slot: "入住后 · 每日偶来市场顺路", dish: "과일모찌 · 水果糯米年糕", note: "水果年糕适合买后尽快吃；中秋期间可能排队或售罄，排队超过 15 分钟就先回酒店休息。", mode: "步行" },
-      { id: "ojeong", place: "ojeong", priority: "入住后", slot: "15:15 后 · Kenny Stay 附近", dish: "오는정김밥 · 招牌紫菜包饭", note: "热门取餐店，建议到西归浦前先电话确认当日营业和可取餐时间，不为排队耽误次日休息。", mode: "步行" }
-    ],
-    "0926": [
-      { id: "angeori", place: "angeori", priority: "恢复晚餐", slot: "完成 7-1 后 · 旅行者中心附近", dish: "옥돔정식 · 玉鲷家常定食", note: "适合长距离徒步后的正餐；先回酒店洗漱还是直接用餐，按当天体力和营业状态决定。", mode: "步行" }
-    ],
-    "0927": [
-      { id: "hodo-bakery", place: "hodoBakery", priority: "外带补给", slot: "前往和顺起点途中 · 最多停留 10 分钟", dish: "제주쑥밤팥빵 · 济州艾草板栗红豆面包", note: "在10号线起点附近，适合提前预留或快速外带。排队、售罄或12:00前无法开走时直接跳过。", mode: "打车" },
-      { id: "chunsim", place: "chunsim", priority: "可选晚餐", slot: "返回民宿后 · 打车约 10 分钟", dish: "통갈치구이 · 整条烤带鱼", note: "偏多人分享菜，一个人用餐先确认是否有合适份量；不要为了餐厅延长当天徒步。", mode: "打车" }
-    ],
-    "0928": [
-      { id: "miyeong", place: "miyeong", priority: "返港午餐", slot: "加波岛返航后 · 约 12:35–13:45", dish: "고등어회 · 青花鱼刺身", note: "从云津港打车前往；独自用餐先确认是否接待及合适份量。排队超过 20 分钟就放弃；用餐后将机场公交顺延至 14:00 以后。", mode: "打车" }
-    ]
-  };
-
-  const routes = {
-    "1": { id: "1", km: 15.1, mode: "徒步", counts: true },
-    "1-1": { id: "1-1", km: 13.2, mode: "骑行", counts: false },
-    "5": { id: "5", km: 13.4, mode: "徒步", counts: true },
-    "6": { id: "6", km: 10.1, mode: "徒步", counts: true },
-    "7": { id: "7", km: 12.9, mode: "徒步", counts: true },
-    "7-1": { id: "7-1", km: 15.7, mode: "徒步", counts: true },
-    "8": { id: "8", km: 19.3, mode: "徒步", counts: true },
-    "10": { id: "10", km: 15.6, mode: "徒步", counts: true },
-    "10-1": { id: "10-1", km: 4.2, mode: "徒步", counts: true }
-  };
-
-  const days = [
-    {
-      id: "0923", date: "9月23日", weekday: "周三", label: "抵达济州", walkKm: 0, routeIds: [],
-      lead: "落地后只做一件事：尽快入住并把明早补给准备好。",
-      next: { time: "21:35", title: "抵达济州国际机场", detail: "取行李、入境后直接前往出租车乘车区", mode: "航班", place: "airport" },
-      timeline: [
-        { time: "21:35", title: "航班落地", detail: "预留 45–65 分钟取行李和入境。", type: "航班", place: "airport" },
-        { time: "22:20", title: "机场出租车 → New Star Hotel", detail: "车程约 10–15 分钟；向司机出示韩文酒店名和地址。", type: "打车", place: "newStar" },
-        { time: "22:45", title: "办理入住", detail: "确认次日 05:35 退房；买好早餐、饮水、电解质和便携午餐。", type: "住宿", place: "newStar" }
-      ],
-      hotel: "newStar"
-    },
-    {
-      id: "0924", date: "9月24日", weekday: "周四", label: "1 + 牛岛", walkKm: 15.1, bikeKm: 13.2, routeIds: ["1", "1-1"],
-      lead: "先坐201路到Playce Camp寄存行李，再返回古城站换反方向201路去始兴里起点。",
-      next: { time: "05:35", title: "New Star Hotel → Playce Camp寄存行李", detail: "步行到济州客运站，目标搭05:55左右的201路前往古城换乘站", mode: "201 BUS", place: "playce" },
-      timeline: [
-        { time: "05:35", title: "退房，步行前往济州客运站", detail: "约10–15分钟；携带全部行李。", type: "步行", place: "jejuTerminal" },
-        { time: "05:55", title: "201路 → 古城换乘站", detail: "预计07:20–07:35抵达；此时间为计划窗口，前一晚复核中秋班次。", type: "公交", place: "playce" },
-        { time: "07:35", title: "步行前往Playce Camp", detail: "从古城换乘站步行约5–10分钟到酒店。", type: "步行", place: "playce" },
-        { time: "07:45", title: "酒店寄存行李", detail: "只做快速寄存，必须提前联系酒店确认清晨可接收行李。", type: "行李", place: "playce" },
-        { time: "07:55", title: "返回古城站，搭201路去始兴里", detail: "在反方向站台乘车；目标08:15–08:25抵达1号线起点。", type: "公交", place: "siheung" },
-        { time: "08:25", title: "1号线 · 始兴里 → 广峙其海边", detail: "15.1 km，按约4小时快走；起点、中间、终点章都要盖。", type: "徒步", place: "siheung" },
-        { time: "12:20", title: "抵达广峙其海边", detail: "盖完终点章后，在广峙其海边站搭211、212或295路前往城山港。", type: "转场", place: "gwangchigi" },
-        { time: "13:00", title: "城山港购票、候船", detail: "预留约1小时办理乘船手续并简单补给，现场确认17:30返程船班。", type: "船班", place: "seongsanPort" },
-        { time: "14:00", title: "乘船前往牛岛", detail: "约15分钟抵达，租车时确认17:10前还车。", type: "船班", place: "udo" },
-        { time: "14:30", title: "牛岛 1-1 号线骑行", detail: "13.2 km，骑行目标约2.5小时；骑行不计入本页认证步行里程。", type: "骑行", place: "udo" },
-        { time: "17:10", title: "回到牛岛码头", detail: "还车后搭17:30返程船；18:00末班只作为紧急备用。", type: "截止", place: "udo", risk: true },
-        { time: "18:00", title: "城山港 → Playce Camp", detail: "搭211、212或295路，在古城换乘站附近下车；到酒店取行李并办理入住。", type: "公交", place: "playce" }
-      ],
-      cutoff: "前一晚必须确认Playce Camp可在07:45左右寄存。08:05仍未离开酒店就打车去始兴里；12:35尚未走完1号线则取消牛岛骑行。",
-      fallback: "牛岛取消后，从广峙其海边搭201、211、212或295路返回古城换乘站，步行到Playce Camp取行李并入住。",
-      hotel: "playce"
-    },
-    {
-      id: "0925", date: "9月25日", weekday: "周五 · 中秋", label: "5 + 6", walkKm: 23.5, routeIds: ["5", "6"],
-      lead: "中秋当天以出租车保证早出发，早餐、午餐和水必须前一晚备好。",
-      next: { time: "05:45", title: "Playce Camp → 南元浦口", detail: "主方案打车 45–55 分钟；201 路只在确认合适早班后使用", mode: "TAXI", place: "namwon" },
-      timeline: [
-        { time: "05:45", title: "退房，打车前往南元浦口", detail: "携带全部行李；给司机看韩文地点名。", type: "打车", place: "namwon" },
-        { time: "06:45", title: "5 号线 · 南元 → 牛沼河口", detail: "13.4 km，快走目标约 3.5–4 小时；完成三章。", type: "徒步", place: "namwon" },
-        { time: "10:30", title: "牛沼河口短休整", detail: "补水、进食后接走 6 号线，不安排正式午餐店。", type: "补给", place: "soesokkak" },
-        { time: "10:45", title: "6 号线 · 牛沼河口 → 旅行者中心", detail: "10.1 km，快走目标约 2.5–3 小时；完成三章。", type: "徒步", place: "soesokkak" },
-        { time: "14:30", title: "抵达济州偶来旅行者中心", detail: "最晚目标 15:30；步行约 10–15 分钟去酒店。", type: "到达", place: "traveler" },
-        { time: "15:00", title: "入住 Kenny Stay", detail: "9月25日与26日连住两晚，整理次日轻装。", type: "住宿", place: "kenny" }
-      ],
-      cutoff: "当天为中秋正日：不要把沿途餐厅、便利店或游客中心正常营业作为前提。",
-      fallback: "若出租车难叫，先到城山 / 古城主路站点，确认南向 201 路实时到站后乘车；出发时间随之顺延。",
-      hotel: "kenny"
-    },
-    {
-      id: "0926", date: "9月26日", weekday: "周六", label: "7 + 7-1", walkKm: 28.6, routeIds: ["7", "7-1"],
-      lead: "利用酒店与线路闭环位置，全天不做长距离乘车，集中完成 28.6 km。",
-      next: { time: "06:15", title: "Kenny Stay → 旅行者中心", detail: "步行约 10–15 分钟，06:30 准时开走", mode: "WALK", place: "traveler" },
-      timeline: [
-        { time: "06:15", title: "从酒店步行出发", detail: "行李留在连住酒店，只带徒步装备。", type: "步行", place: "kenny" },
-        { time: "06:30", title: "7 号线 · 旅行者中心 → 西归浦客运站", detail: "12.9 km，目标约 3–3.5 小时；完成三章。", type: "徒步", place: "traveler" },
-        { time: "09:45", title: "客运站补给与盖章", detail: "预留 20–30 分钟补水、吃东西，确认 7-1 起点章。", type: "补给", place: "seogwipoTerminal" },
-        { time: "10:15", title: "7-1 号线 · 客运站 → 旅行者中心", detail: "15.7 km，目标约 4–4.5 小时；完成三章。", type: "徒步", place: "seogwipoTerminal" },
-        { time: "14:30", title: "回到旅行者中心", detail: "最晚目标 15:00；之后步行返回 Kenny Stay。", type: "到达", place: "traveler" }
-      ],
-      hotel: "kenny"
-    },
-    {
-      id: "0927", date: "9月27日", weekday: "周日", label: "8 + 10前段", walkKm: 30.7, routeIds: ["8", "10"],
-      stampPlan: [
-        { routeId: "8", stamps: ["start", "middle", "end"], note: "完成三章" },
-        { routeId: "10", stamps: ["start", "middle"], note: "本日盖起点、中间章" }
-      ],
-      lead: "走完8号线后，只走10号线前11.4 km，到Seotal Oreum中间章结束。",
-      next: { time: "05:35", title: "Kenny Stay → 月坪起点", detail: "退房后打车约 20–25 分钟，目标 06:10 开走", mode: "TAXI", place: "wolpyeong" },
-      timeline: [
-        { time: "05:35", title: "退房，打车前往月坪", detail: "携带全部行李；520 / 600 路仅作非早班备选。", type: "打车", place: "wolpyeong" },
-        { time: "06:10", title: "8 号线 · 月坪 → 大坪", detail: "19.3 km，快走目标 4.5–5 小时；完成三章。", type: "徒步", place: "wolpyeong" },
-        { time: "11:00", title: "大坪 → Amantov Pension", detail: "打车约 10–20 分钟，只做快速寄存。需事先获得民宿确认。", type: "行李", place: "amantov" },
-        { time: "11:30", title: "民宿 → 和顺金沙滩", detail: "打车约 15–20 分钟；最迟 12:00 开始 10 号线。", type: "打车", place: "hwasun" },
-        { time: "12:00", title: "10 号线前段 · 和顺 → Seotal Oreum", detail: "本日走约11.4 km；依次完成起点章与中间章。", type: "徒步", place: "hwasun" },
-        { time: "15:45", title: "抵达10号线中间章", detail: "在Seotal Oreum停车场亭子盖中间章，到此停止，不继续赶终点。", type: "盖章", place: "seotal" },
-        { time: "16:05", title: "中间章 → Amantov Pension", detail: "建议直接打车返回，约20–30分钟；次日清晨回到同一点续走。", type: "打车", place: "amantov" }
-      ],
-      cutoff: "13:00 仍未从和顺开始10号线，就不要硬赶中间章。",
-      fallback: "当天只完成8号线；9月28日取消加波岛，清晨完整走10号线，终点直接领证。认证步行仍约102.1 km。",
-      hotel: "amantov"
-    },
-    {
-      id: "0928", date: "9月28日", weekday: "周一", label: "续10 + 10-1", walkKm: 8.4, routeIds: ["10-1"],
-      stampPlan: [
-        { routeId: "10", stamps: ["end"], note: "续走并盖终点章" },
-        { routeId: "10-1", stamps: ["start", "middle", "end"], note: "完成三章" }
-      ],
-      lead: "清晨续走10号线剩余4.2 km，达到102.1 km后先领证，再搭10:00船去加波岛。",
-      next: { time: "06:30", title: "起床，整理行李准备退房", detail: "简单早餐并完成整理，07:00准时退房", mode: "WAKE", place: "amantov" },
-      timeline: [
-        { time: "06:30", title: "起床、早餐与整理行李", detail: "早餐从简，全部行李在07:00前整理完成。", type: "准备", place: "amantov" },
-        { time: "07:00", title: "退房，打车返回中间章", detail: "携带全部行李；车程约20–30分钟，回到前一日停止点。", type: "打车", place: "seotal" },
-        { time: "07:25", title: "续走10号线 · Seotal Oreum → 摹瑟浦", detail: "剩余约4.2 km，快走目标约1小时10分钟；抵达后盖10号线终点章。", type: "徒步", place: "seotal" },
-        { time: "08:35", title: "抵达摹瑟浦运动场", detail: "至此认证步行约102.1 km；服务点已于08:30开放。", type: "到达", place: "hamo" },
-        { time: "08:40", title: "领取100 km证书", detail: "无排队时先办理；若抵达较晚或需要等待，改为返港后领取。", type: "证书", place: "hamo" },
-        { time: "09:00", title: "摹瑟浦运动场 → 云津港", detail: "打车约5–10分钟，目标09:10抵达，最迟09:20前完成取票。", type: "打车", place: "unjin" },
-        { time: "10:00", title: "乘船前往加波岛", detail: "约10分钟抵达；返程时间以往返订单为准，优先选择12:20返港组合。", type: "船班", place: "gapado" },
-        { time: "10:20", title: "10-1 号线 · 加波岛环线", detail: "4.2 km，预计1–1.5小时；完成起点、中间、终点章。", type: "徒步", place: "gapado" },
-        { time: "12:20", title: "乘船返回云津港", detail: "具体返程由订票班次绑定；若需等待，仍保留充足机场余量。", type: "船班", place: "unjin" },
-        { time: "13:10", title: "云津港 → 济州机场", detail: "选择明确标注途经机场的151系列班次，预留70–90分钟；无合适班次则打车。", type: "公交", place: "airport" },
-        { time: "15:00", title: "抵达济州机场", detail: "距离22:40起飞有充足余量，可在机场休整和用餐。", type: "航班", place: "airport" },
-        { time: "22:40", title: "离开济州岛", detail: "结束本次偶来小路行程。", type: "航班", place: "airport" }
-      ],
-      cutoff: "08:45后才走完10号线就跳过上午领证，直接去云津港；证书改在返港并等到13:00午休结束后办理。09:00仍未走完则取消加波岛。",
-      fallback: "加波岛停航：完成10号线并领取证书后直接去机场。若前日没到中间章：取消加波岛，清晨从和顺完整走完10号线。",
-      hotel: null
-    }
-  ];
+  const data = window.TRIP_DATA;
+  const STORAGE_KEY = "jeju-olle-plan-v4";
+  const LEGACY_STORAGE_KEY = "jeju-olle-plan-v3";
+  const RECOVERY_KEY = "jeju-olle-plan-v4-recovery";
+  const ALLOWED_VIEWS = ["today", "plan", "checkins", "more"];
+  const ALLOWED_MODES = ["步行", "公交", "打车", "骑行"];
+  const DAY_IDS = data.days.map(function (day) { return day.id; });
+  const filterState = { day: "all", category: "all" };
+  let state = loadState();
+  let deferredInstallPrompt = null;
+  let waitingWorker = null;
+  let updateReloadRequested = false;
+  let deletedCheckin = null;
+  let toastTimer = null;
+  let printRestore = null;
 
   function initialDayId() {
     const now = new Date();
     const key = String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0");
     if (now.getFullYear() !== 2026 || key < "0923") return "0923";
     if (key > "0928") return "0928";
-    return key;
+    return DAY_IDS.includes(key) ? key : "0923";
   }
 
-  const defaults = { version: 3, activeDay: initialDayId(), theme: "timeline", compact: false, reducedMotion: false, notes: "", dayNotes: {}, stamps: {}, foodChecks: {}, fallbacks: {} };
-  let state = loadState();
-  let printRestoreDay = null;
+  function defaultState() {
+    return {
+      version: 4,
+      activeView: "today",
+      activeDay: initialDayId(),
+      compact: false,
+      notes: "",
+      dayNotes: {},
+      stamps: {},
+      checkinChecks: {},
+      customCheckins: [],
+      confirmations: {},
+      fallbacks: {}
+    };
+  }
+
+  function cleanText(value, maxLength) {
+    return typeof value === "string" ? value.slice(0, maxLength) : "";
+  }
+
+  function cleanBooleanMap(value, maxKeys) {
+    const result = {};
+    if (!value || typeof value !== "object" || Array.isArray(value)) return result;
+    Object.keys(value).slice(0, maxKeys).forEach(function (key) {
+      if (typeof key === "string" && key.length <= 100) result[key] = Boolean(value[key]);
+    });
+    return result;
+  }
+
+  function isValidCoordinate(lat, lng) {
+    return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  }
+
+  function sanitizeCheckin(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const name = cleanText(raw.name, 120).trim();
+    const dayId = DAY_IDS.includes(raw.dayId) ? raw.dayId : "";
+    const category = Object.hasOwn(data.categories, raw.category) && raw.category !== "all" ? raw.category : "other";
+    if (!name || !dayId) return null;
+    const lat = raw.lat === "" || raw.lat == null ? null : Number(raw.lat);
+    const lng = raw.lng === "" || raw.lng == null ? null : Number(raw.lng);
+    const coordinatesValid = isValidCoordinate(lat, lng);
+    return {
+      id: cleanText(raw.id, 100) || createId(),
+      custom: true,
+      dayId,
+      category,
+      name,
+      korean: cleanText(raw.korean, 120).trim(),
+      address: cleanText(raw.address, 260).trim(),
+      lat: coordinatesValid ? lat : null,
+      lng: coordinatesValid ? lng : null,
+      mapInput: cleanText(raw.mapInput, 1000).trim(),
+      mode: ALLOWED_MODES.includes(raw.mode) ? raw.mode : "步行",
+      priority: cleanText(raw.priority, 40).trim() || "想去",
+      slot: cleanText(raw.slot, 120).trim(),
+      dish: cleanText(raw.dish, 160).trim(),
+      note: cleanText(raw.note, 1000).trim(),
+      createdAt: cleanText(raw.createdAt, 40) || new Date().toISOString(),
+      updatedAt: cleanText(raw.updatedAt, 40) || new Date().toISOString()
+    };
+  }
+
+  function normalizeState(raw) {
+    const defaults = defaultState();
+    if (!raw || typeof raw !== "object") return defaults;
+    return {
+      version: 4,
+      activeView: ALLOWED_VIEWS.includes(raw.activeView) ? raw.activeView : defaults.activeView,
+      activeDay: DAY_IDS.includes(raw.activeDay) ? raw.activeDay : defaults.activeDay,
+      compact: Boolean(raw.compact),
+      notes: cleanText(raw.notes, 20000),
+      dayNotes: Object.fromEntries(Object.entries(raw.dayNotes || {}).filter(function (entry) {
+        return DAY_IDS.includes(entry[0]) && typeof entry[1] === "string";
+      }).map(function (entry) { return [entry[0], entry[1].slice(0, 5000)]; })),
+      stamps: cleanBooleanMap(raw.stamps, 100),
+      checkinChecks: cleanBooleanMap(raw.checkinChecks || raw.foodChecks, 1000),
+      customCheckins: Array.isArray(raw.customCheckins) ? raw.customCheckins.slice(0, 500).map(sanitizeCheckin).filter(Boolean) : [],
+      confirmations: cleanBooleanMap(raw.confirmations, 100),
+      fallbacks: cleanBooleanMap(raw.fallbacks, 100)
+    };
+  }
+
+  function migrateLegacy(raw) {
+    return normalizeState({
+      version: 4,
+      activeView: "today",
+      activeDay: raw.activeDay,
+      compact: raw.compact,
+      notes: raw.notes,
+      dayNotes: raw.dayNotes,
+      stamps: raw.stamps,
+      checkinChecks: raw.foodChecks,
+      customCheckins: [],
+      confirmations: {},
+      fallbacks: raw.fallbacks
+    });
+  }
 
   function loadState() {
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved && saved.version === defaults.version) return { ...defaults, ...saved };
+      const current = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (current && current.version === 4) return normalizeState(current);
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
+      if (legacy && legacy.version === 3) {
+        const migrated = migrateLegacy(legacy);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
     } catch (error) {
-      console.info("未读取到有效的本地计划，将使用默认值。", error.message);
+      console.info("未读取到有效的本地行程，将使用默认数据。", error.message);
     }
-    return { ...defaults };
+    return defaultState();
   }
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    const status = document.getElementById("autosave-status");
-    if (status) {
-      status.textContent = "刚刚保存";
-      window.clearTimeout(saveState.timer);
-      saveState.timer = window.setTimeout(function () { status.textContent = "已自动保存"; }, 1200);
-    }
+  }
+
+  function createId() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") return window.crypto.randomUUID();
+    return "place-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
   }
 
   function htmlEscape(value) {
-    return String(value).replace(/[&<>"]/g, function (char) {
-      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char];
+    return String(value == null ? "" : value).replace(/[&<>"]/g, function (char) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char];
     });
+  }
+
+  function icon(name) {
+    return '<img src="assets/icons/' + htmlEscape(name) + '" alt="">';
+  }
+
+  function dayById(dayId) {
+    return data.days.find(function (day) { return day.id === dayId; }) || data.days[0];
   }
 
   function routeMode(context) {
@@ -231,19 +171,46 @@
     return { kakao: "FOOT", naver: "walk" };
   }
 
-  function mapLinks(placeKey, context) {
-    const place = places[placeKey];
+  function hasCoordinates(place) {
+    return Boolean(place && place.lat !== null && place.lat !== "" && place.lng !== null && place.lng !== "" &&
+      isValidCoordinate(Number(place.lat), Number(place.lng)));
+  }
+
+  function mapLinks(place, context, compact) {
     if (!place) return "";
     const mode = routeMode(context);
-    const destinationName = encodeURIComponent(place.korean);
-    const currentLocationName = encodeURIComponent("내 위치");
-    const kakaoWeb = `https://map.kakao.com/link/to/${destinationName},${place.lat},${place.lng}`;
-    const naverWeb = `https://map.naver.com/p/directions/-,,/${place.lng},${place.lat},${destinationName}/-/${mode.naver}`;
-    const kakaoApp = `kakaomap://route?ep=${place.lat},${place.lng}&by=${mode.kakao}`;
-    const naverApp = `nmap://route/${mode.naver}?sname=${currentLocationName}&dlat=${place.lat}&dlng=${place.lng}&dname=${destinationName}&appname=jeju.olle.plan`;
-    const kakaoIntent = `intent://route?ep=${place.lat},${place.lng}&by=${mode.kakao}#Intent;scheme=kakaomap;package=net.daum.android.map;S.browser_fallback_url=${encodeURIComponent(kakaoWeb)};end`;
-    const naverIntent = `intent://route/${mode.naver}?sname=${currentLocationName}&dlat=${place.lat}&dlng=${place.lng}&dname=${destinationName}&appname=jeju.olle.plan#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=${encodeURIComponent(naverWeb)};end`;
-    return `<div class="map-actions"><a class="map-link" href="${htmlEscape(kakaoWeb)}" target="_blank" rel="noopener" data-map-app="Kakao Map" data-app-url="${htmlEscape(kakaoApp)}" data-android-intent="${htmlEscape(kakaoIntent)}" aria-label="使用Kakao Map导航到${htmlEscape(place.name)}">KAKAO 导航</a><a class="map-link" href="${htmlEscape(naverWeb)}" target="_blank" rel="noopener" data-map-app="Naver Map" data-app-url="${htmlEscape(naverApp)}" data-android-intent="${htmlEscape(naverIntent)}" aria-label="使用Naver Map导航到${htmlEscape(place.name)}">NAVER 导航</a></div>`;
+    const destination = place.korean || place.name || place.address;
+    const encodedName = encodeURIComponent(destination);
+    let kakaoWeb;
+    let naverWeb;
+    let kakaoApp;
+    let naverApp;
+    let kakaoIntent;
+    let naverIntent;
+
+    if (hasCoordinates(place)) {
+      const lat = Number(place.lat);
+      const lng = Number(place.lng);
+      kakaoWeb = "https://map.kakao.com/link/to/" + encodedName + "," + lat + "," + lng;
+      naverWeb = "https://map.naver.com/p/directions/-,,/" + lng + "," + lat + "," + encodedName + "/-/" + mode.naver;
+      kakaoApp = "kakaomap://route?ep=" + lat + "," + lng + "&by=" + mode.kakao;
+      naverApp = "nmap://route/" + mode.naver + "?sname=" + encodeURIComponent("내 위치") + "&dlat=" + lat + "&dlng=" + lng + "&dname=" + encodedName + "&appname=jeju.olle.plan";
+      kakaoIntent = "intent://route?ep=" + lat + "," + lng + "&by=" + mode.kakao + "#Intent;scheme=kakaomap;package=net.daum.android.map;S.browser_fallback_url=" + encodeURIComponent(kakaoWeb) + ";end";
+      naverIntent = "intent://route/" + mode.naver + "?sname=" + encodeURIComponent("내 위치") + "&dlat=" + lat + "&dlng=" + lng + "&dname=" + encodedName + "&appname=jeju.olle.plan#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=" + encodeURIComponent(naverWeb) + ";end";
+    } else {
+      kakaoWeb = place.mapInput && /kakao|kko./i.test(place.mapInput) ? place.mapInput : "https://map.kakao.com/link/search/" + encodedName;
+      naverWeb = place.mapInput && /naver/i.test(place.mapInput) ? place.mapInput : "https://map.naver.com/p/search/" + encodedName;
+      kakaoApp = "kakaomap://search?q=" + encodedName;
+      naverApp = "nmap://search?query=" + encodedName + "&appname=jeju.olle.plan";
+      kakaoIntent = "intent://search?q=" + encodedName + "#Intent;scheme=kakaomap;package=net.daum.android.map;S.browser_fallback_url=" + encodeURIComponent(kakaoWeb) + ";end";
+      naverIntent = "intent://search?query=" + encodedName + "&appname=jeju.olle.plan#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=" + encodeURIComponent(naverWeb) + ";end";
+    }
+
+    const labelSuffix = compact ? "" : " 导航";
+    return '<div class="map-actions">' +
+      '<a class="map-button' + (hasCoordinates(place) ? "" : " disabled") + '" href="' + htmlEscape(kakaoWeb) + '" target="_blank" rel="noopener" data-map-app="Kakao Map" data-app-url="' + htmlEscape(kakaoApp) + '" data-android-intent="' + htmlEscape(kakaoIntent) + '" aria-label="使用Kakao Map前往' + htmlEscape(place.name) + '">' + icon("map.svg") + "KAKAO" + labelSuffix + "</a>" +
+      '<a class="map-button' + (hasCoordinates(place) ? "" : " disabled") + '" href="' + htmlEscape(naverWeb) + '" target="_blank" rel="noopener" data-map-app="Naver Map" data-app-url="' + htmlEscape(naverApp) + '" data-android-intent="' + htmlEscape(naverIntent) + '" aria-label="使用Naver Map前往' + htmlEscape(place.name) + '">' + icon("navigation.svg") + "NAVER" + labelSuffix + "</a>" +
+    "</div>";
   }
 
   function isMobileDevice() {
@@ -252,230 +219,821 @@
     return mobileUa || ipadDesktopUa;
   }
 
-  function showMapStatus(message) {
-    let status = document.getElementById("map-app-status");
-    if (!status) {
-      status = document.createElement("div");
-      status.id = "map-app-status";
-      status.className = "map-app-status";
-      status.setAttribute("role", "status");
-      status.setAttribute("aria-live", "polite");
-      document.body.appendChild(status);
-    }
-    status.textContent = message;
-    status.dataset.visible = "true";
-    window.clearTimeout(showMapStatus.timer);
-    showMapStatus.timer = window.setTimeout(function () { status.dataset.visible = "false"; }, 2200);
-  }
-
   function openMapApp(event, link) {
     if (!isMobileDevice()) return;
     event.preventDefault();
     const fallbackUrl = link.href;
-    const appName = link.dataset.mapApp;
     const launchUrl = /Android/i.test(navigator.userAgent) ? link.dataset.androidIntent : link.dataset.appUrl;
-    let fallbackTimer = null;
+    let fallbackTimer;
 
     function stopFallback() {
       window.clearTimeout(fallbackTimer);
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("pagehide", stopFallback);
     }
-
     function handleVisibility() {
       if (document.hidden) stopFallback();
     }
 
     document.addEventListener("visibilitychange", handleVisibility);
     window.addEventListener("pagehide", stopFallback, { once: true });
-    showMapStatus(`正在打开 ${appName} 路线…`);
+    showToast("正在打开 " + link.dataset.mapApp + "…");
     fallbackTimer = window.setTimeout(function () {
       stopFallback();
-      if (document.hidden) return;
-      showMapStatus(`未检测到 ${appName}，正在打开网页版路线`);
-      window.location.href = fallbackUrl;
+      if (!document.hidden) window.location.href = fallbackUrl;
     }, 1200);
     window.location.href = launchUrl;
   }
 
   function completedKm() {
-    return Object.values(routes).reduce(function (total, route) {
+    return Object.values(data.routes).reduce(function (total, route) {
       if (!route.counts) return total;
-      const complete = ["start", "middle", "end"].every(function (stamp) { return Boolean(state.stamps[route.id + "-" + stamp]); });
+      const complete = ["start", "middle", "end"].every(function (stamp) {
+        return Boolean(state.stamps[route.id + "-" + stamp]);
+      });
       return total + (complete ? route.km : 0);
     }, 0);
   }
 
-  function completeStampCount() {
-    const total = Object.values(routes).reduce(function (sum, route) { return sum + (route.counts ? 3 : 0); }, 0);
-    const checked = Object.keys(state.stamps).filter(function (key) { return state.stamps[key] && !key.startsWith("1-1-"); }).length;
-    return { checked: checked, total: total };
+  function stampStats() {
+    const requiredRoutes = Object.values(data.routes).filter(function (route) {
+      return route.counts && !route.optional;
+    });
+    const total = requiredRoutes.length * 3;
+    const checked = requiredRoutes.reduce(function (sum, route) {
+      return sum + ["start", "middle", "end"].filter(function (stamp) {
+        return Boolean(state.stamps[route.id + "-" + stamp]);
+      }).length;
+    }, 0);
+    return { checked, total };
   }
 
-  function renderSummary() {
+  function checkinsForDay(dayId) {
+    const defaults = data.defaultCheckins.filter(function (item) { return item.dayId === dayId; }).map(function (item) {
+      return Object.assign({ custom: false }, item);
+    });
+    const custom = state.customCheckins.filter(function (item) { return item.dayId === dayId; });
+    return defaults.concat(custom);
+  }
+
+  function combinedCheckins() {
+    return data.defaultCheckins.map(function (item) { return Object.assign({ custom: false }, item); }).concat(state.customCheckins);
+  }
+
+  function placeForCheckin(item) {
+    if (item.custom) {
+      return {
+        name: item.name,
+        korean: item.korean,
+        address: item.address,
+        lat: item.lat,
+        lng: item.lng,
+        mapInput: item.mapInput
+      };
+    }
+    return data.places[item.place];
+  }
+
+  function renderHero() {
     const km = completedKm();
-    const stampCount = completeStampCount();
+    const stamps = stampStats();
     const percent = Math.min(100, km);
-    const remaining = Math.max(0, 100 - km);
-    document.getElementById("trip-summary").innerHTML = `<div class="summary-inner"><div class="summary-intro"><strong>${km >= 100 ? "已达到证书里程" : "距离 100 km 证书还差 " + remaining.toFixed(1) + " km"}</strong><p>认证按整条路线三章齐全计算；牛岛骑行单独记录。</p><div class="progress-track" aria-label="认证里程进度"><div class="progress-fill" style="width:${percent}%"></div></div></div><div class="metric"><span>计划徒步</span><strong>${trip.plannedWalkKm}<small> km</small></strong></div><div class="metric"><span>已认证</span><strong>${km.toFixed(1)}<small> km</small></strong></div><div class="metric"><span>纸质盖章</span><strong>${stampCount.checked}<small> / ${stampCount.total}</small></strong></div></div>`;
+    document.getElementById("today-overview").innerHTML =
+      '<section class="today-hero"><div class="today-hero-inner">' +
+        '<div><p class="trip-date">2026.09.23–09.28 · SOLO WALK</p><h1 id="today-title">济州偶来 <span>100 km行程</span></h1><p class="trip-route">北京大兴 → 济州东部 → 西归浦 → 加波岛 → 北京首都</p></div>' +
+        '<div class="hero-progress"><div class="hero-progress-top"><span>' + (km >= 100 ? "证书里程已达成" : "认证进度") + '</span><strong>' + km.toFixed(1) + ' KM</strong></div><div class="progress-track"><div class="progress-fill" style="width:' + percent + '%"></div></div><p class="hero-progress-foot">核心计划 ' + data.trip.coreCertificateKm + ' km · 纸质盖章 ' + stamps.checked + " / " + stamps.total + "</p></div>" +
+      "</div></section>";
   }
 
-  function renderTabs() {
-    document.getElementById("day-tabs").innerHTML = days.map(function (day) {
-      return `<button class="day-tab" type="button" role="tab" data-day="${day.id}" aria-selected="${state.activeDay === day.id}"><time datetime="2026-${day.id.slice(0,2)}-${day.id.slice(2)}">${day.date.replace("月", "/").replace("日", "")}</time><span>${day.label}</span></button>`;
+  function renderDateStrip(targetId) {
+    document.getElementById(targetId).innerHTML = data.days.map(function (day) {
+      return '<button class="date-chip" type="button" data-day="' + day.id + '" aria-selected="' + (state.activeDay === day.id) + '"><time datetime="2026-' + day.id.slice(0, 2) + "-" + day.id.slice(2) + '">' + day.date.replace("月", "/").replace("日", "") + "</time><span>" + htmlEscape(day.label) + "</span></button>";
     }).join("");
   }
 
-  function renderStampRows(day) {
-    const stampPlans = day.stampPlan || day.routeIds.map(function (routeId) { return { routeId: routeId, stamps: ["start", "middle", "end"] }; });
-    if (!stampPlans.length) return "";
-    const stampLabels = { start: "起点", middle: "中间", end: "终点" };
-    return `<div class="section-heading" data-section="stamps"><div><p class="section-kicker">PAPER PASSPORT</p><h2>盖章检查</h2></div><span>三章齐全才计入</span></div><div class="stamp-grid">${stampPlans.map(function (plan) {
-      const route = routes[plan.routeId];
-      const note = plan.note || (route.counts ? "计入认证" : "骑行记录");
-      return `<div class="route-stamps stamp-count-${plan.stamps.length}"><div class="route-label"><strong>${route.id} 号线</strong><span>${route.km} km · ${htmlEscape(note)}</span></div>${plan.stamps.map(function (stamp) {
-        const key = plan.routeId + "-" + stamp;
-        return `<label class="stamp-check"><input type="checkbox" data-stamp="${key}" ${state.stamps[key] ? "checked" : ""}><span>${stampLabels[stamp]}</span></label>`;
-      }).join("")}</div>`;
-    }).join("")}</div>`;
+  function renderNextCard(day) {
+    const place = data.places[day.next.place];
+    return '<section class="next-card"><div class="next-card-top"><div><span class="next-label">NEXT ACTION</span><time>' + htmlEscape(day.next.time) + '</time></div><span class="mode-badge">' + htmlEscape(day.next.mode) + '</span></div><h3>' + htmlEscape(day.next.title) + "</h3><p>" + htmlEscape(day.next.detail) + "</p>" + (place ? mapLinks(place, day.next.mode) : "") + "</section>";
+  }
+
+  function renderQuickTimeline(day) {
+    let startIndex = day.timeline.findIndex(function (item) {
+      return item.time === day.next.time && item.title === day.next.title;
+    });
+    const items = startIndex >= 0 ? day.timeline.slice(startIndex + 1, startIndex + 4) : day.timeline.filter(function (item) {
+      return item.title !== day.next.title;
+    }).slice(0, 3);
+    if (!items.length) return "";
+    return '<div class="section-heading"><h2>接下来</h2><span>' + items.length + ' 个节点</span></div><div class="quick-timeline">' + items.map(function (item) {
+      return '<article class="quick-step"><time>' + htmlEscape(item.time) + '</time><div class="step-card"><h3>' + htmlEscape(item.title) + "</h3><p>" + htmlEscape(item.detail) + "</p></div></article>";
+    }).join("") + "</div>";
+  }
+
+  function confirmationsForDay(dayId) {
+    return data.confirmations.filter(function (item) { return item.dayId === dayId; });
+  }
+
+  function renderConfirmationRows(items) {
+    if (!items.length) return '<p class="checkin-detail">今天没有待确认事项。</p>';
+    return '<div class="check-list">' + items.map(function (item) {
+      return '<label class="confirmation-row"><input type="checkbox" data-confirmation="' + item.id + '" ' + (state.confirmations[item.id] ? "checked" : "") + '><span>' + htmlEscape(item.label) + '</span><small>' + htmlEscape(item.hint) + "</small></label>";
+    }).join("") + "</div>";
+  }
+
+  function renderToday() {
+    const day = dayById(state.activeDay);
+    const stamps = stampStats();
+    const km = completedKm();
+    const confirmations = confirmationsForDay(day.id);
+    const checkedConfirmations = confirmations.filter(function (item) { return state.confirmations[item.id]; }).length;
+    const totalDistance = day.walkKm + (day.bikeKm || 0);
+    const checkins = checkinsForDay(day.id);
+    const checkedPlaces = checkins.filter(function (item) { return state.checkinChecks[item.id]; }).length;
+
+    document.getElementById("today-content").innerHTML =
+      '<div class="day-title-row"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + '</h2><p>' + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK") + "</small></div></div>" +
+      '<div class="today-grid"><div class="today-primary">' +
+        renderNextCard(day) +
+        renderQuickTimeline(day) +
+        (day.cutoff ? '<section class="cutoff-card"><strong>硬截止 · ' + htmlEscape(day.cutoff) + "</strong><p>" + htmlEscape(day.fallback) + '</p><label class="fallback-toggle"><input type="checkbox" data-fallback="' + day.id + '" ' + (state.fallbacks[day.id] ? "checked" : "") + '><span>' + (state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案") + "</span></label></section>" : "") +
+        '<div class="data-actions"><button class="secondary-button" type="button" data-view-target="plan">' + icon("calendar-days.svg") + "查看完整时间轴</button></div>" +
+      '</div><aside class="today-side">' +
+        '<section class="status-panel"><div class="status-panel-head"><h3>100 km进度</h3><span>' + (km >= 100 ? "READY" : (100 - km).toFixed(1) + " KM TO GO") + '</span></div><div class="mini-progress"><i style="width:' + Math.min(100, km) + '%"></i></div><div class="metric-row"><div><span>核心</span><strong>' + data.trip.coreCertificateKm + '</strong></div><div><span>认证</span><strong>' + km.toFixed(1) + '</strong></div><div><span>盖章</span><strong>' + stamps.checked + "/" + stamps.total + "</strong></div></div></section>" +
+        '<section class="status-panel"><div class="status-panel-head"><h3>出发前确认</h3><span>' + checkedConfirmations + "/" + confirmations.length + "</span></div>" + renderConfirmationRows(confirmations) + "</section>" +
+        '<section class="status-panel"><div class="status-panel-head"><h3>当天打卡</h3><span>' + checkedPlaces + "/" + checkins.length + '</span></div><div class="data-actions"><button class="secondary-button" type="button" data-view-target="checkins">' + icon("map-pin-check.svg") + '查看地点</button><button class="secondary-button" type="button" data-open-checkin>' + icon("plus.svg") + '新增</button></div></section>' +
+      "</aside></div>";
   }
 
   function renderTimeline(day) {
-    return `<div class="section-heading" data-section="timeline"><div><p class="section-kicker">TIMELINE</p><h2>时间与交通</h2></div><span>${day.timeline.length} 个节点</span></div><div class="timeline">${day.timeline.map(function (item) {
-      const place = item.place ? places[item.place] : null;
-      return `<article class="timeline-item"><time class="timeline-time">${htmlEscape(item.time)}</time><div class="timeline-card"><div class="timeline-top"><h3>${htmlEscape(item.title)}</h3><span class="type-tag ${item.risk ? "risk" : (item.type === "徒步" ? "walk" : "")}">${htmlEscape(item.type)}</span></div><p>${htmlEscape(item.detail)}</p>${place ? `<p class="place-address"><b>${htmlEscape(place.korean)}</b> · ${htmlEscape(place.address)}</p>${mapLinks(item.place, item.type + " " + item.title)}` : ""}</div></article>`;
-    }).join("")}</div>`;
+    return '<div class="section-heading"><h2>时间与交通</h2><span>' + day.timeline.length + ' 个节点</span></div><div class="timeline">' + day.timeline.map(function (item) {
+      const place = item.place ? data.places[item.place] : null;
+      const typeClass = item.risk ? "risk" : item.type === "徒步" ? "walk" : "";
+      return '<article class="timeline-item"><time class="timeline-time">' + htmlEscape(item.time) + '</time><div class="timeline-card"><div class="timeline-top"><h3>' + htmlEscape(item.title) + '</h3><span class="type-tag ' + typeClass + '">' + htmlEscape(item.type) + "</span></div><p>" + htmlEscape(item.detail) + "</p>" + (place ? '<p class="place-address"><b>' + htmlEscape(place.korean) + "</b> · " + htmlEscape(place.address) + "</p>" + mapLinks(place, item.type + " " + item.title) : "") + "</div></article>";
+    }).join("") + "</div>";
   }
 
-  function renderFoodStops(day) {
-    const stops = foodStops[day.id] || [];
-    if (!stops.length) return "";
-    const checked = stops.filter(function (stop) { return state.foodChecks[stop.id]; }).length;
-    return `<div class="section-heading" data-section="food"><div><p class="section-kicker">TASTE OF JEJU</p><h2>顺路美食</h2></div><span>${checked} / ${stops.length} 已打卡</span></div><div class="food-list">${stops.map(function (stop) {
-      const place = places[stop.place];
-      return `<article class="food-stop"><div class="food-stop-top"><div><span class="food-priority">${htmlEscape(stop.priority)}</span><h3>${htmlEscape(place.name)}</h3><p class="food-korean">${htmlEscape(place.korean)}</p></div><label class="food-check"><input type="checkbox" data-food-check="${stop.id}" ${state.foodChecks[stop.id] ? "checked" : ""}><span>${state.foodChecks[stop.id] ? "已打卡" : "打卡"}</span></label></div><dl class="food-facts"><div><dt>推荐</dt><dd>${htmlEscape(stop.dish)}</dd></div><div><dt>时段</dt><dd>${htmlEscape(stop.slot)}</dd></div></dl><p class="food-note">${htmlEscape(stop.note)}</p><p class="place-address"><b>${htmlEscape(place.korean)}</b> · ${htmlEscape(place.address)}</p>${mapLinks(stop.place, stop.mode)}</article>`;
-    }).join("")}</div>`;
-  }
-
-  function renderDay(day, printMode) {
-    const dayDistance = day.walkKm + (day.bikeKm || 0);
-    const hotel = day.hotel ? places[day.hotel] : null;
-    const dayNumber = String(days.findIndex(function (item) { return item.id === day.id; }) + 1).padStart(2, "0");
-    return `<article class="${printMode ? "print-day" : "active-day"}" data-rendered-day="${day.id}" data-section="day"><header class="day-heading"><div><p class="day-meta"><span>DAY ${dayNumber} / ${String(days.length).padStart(2, "0")}</span><span>${htmlEscape(day.weekday)} · ${htmlEscape(day.date)}</span></p><h2>${htmlEscape(day.label)}</h2><p>${htmlEscape(day.lead)}</p></div><div class="distance-stamp">${dayDistance.toFixed(1)}<small>${day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK"}</small></div></header><section class="next-move" aria-label="下一步交通"><time class="time">${htmlEscape(day.next.time)}</time><div><span class="next-label">NEXT</span><strong>${htmlEscape(day.next.title)}</strong><p>${htmlEscape(day.next.detail)}</p>${mapLinks(day.next.place, day.next.mode + " " + day.next.title)}</div><span class="mode">${htmlEscape(day.next.mode)}</span></section>${renderTimeline(day)}${day.cutoff ? `<section class="cutoff-box"><strong>硬截止 · ${htmlEscape(day.cutoff)}</strong><p>${htmlEscape(day.fallback)}</p><label class="fallback-control"><input type="checkbox" data-fallback="${day.id}" ${state.fallbacks[day.id] ? "checked" : ""}><span>${state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案"}</span></label></section>` : ""}${renderStampRows(day)}${renderFoodStops(day)}${hotel ? `<div class="section-heading"><div><p class="section-kicker">STAY</p><h2>今晚住宿</h2></div></div><section class="hotel-strip"><div><h3>${htmlEscape(hotel.name)}</h3><p><b>${htmlEscape(hotel.korean)}</b> · ${htmlEscape(hotel.address)}</p></div>${mapLinks(day.hotel, "步行")}</section>` : ""}<div class="section-heading"><div><p class="section-kicker">NOTES</p><h2>当天备注</h2></div><span>自动保存</span></div><textarea class="day-notes" data-day-note="${day.id}" rows="4" placeholder="记录天气、班次、身体状态和临时变更……">${htmlEscape(state.dayNotes[day.id] || "")}</textarea></article>`;
-  }
-
-  function renderActiveDay() {
-    const day = days.find(function (item) { return item.id === state.activeDay; }) || days[0];
-    document.getElementById("day-view").innerHTML = renderDay(day, false);
-    updateMobileNav();
-  }
-
-  function updateMobileNav() {
-    document.querySelectorAll(".mobile-jump-nav [data-jump]").forEach(function (button) {
-      const target = button.dataset.jump === "certificate"
-        ? document.getElementById("certificate-panel")
-        : document.querySelector(`[data-section="${button.dataset.jump}"]`);
-      button.disabled = !target;
+  function renderStamps(day) {
+    const plans = day.stampPlan || day.routeIds.map(function (routeId) {
+      return { routeId, stamps: ["start", "middle", "end"] };
     });
-    syncMobileNav();
+    if (!plans.length) return "";
+    const labels = { start: "起点", middle: "中间", end: "终点" };
+    return '<div class="section-heading"><h2>纸质护照盖章</h2><span>整条路线三章齐全才计入</span></div><div class="stamp-grid">' + plans.map(function (plan) {
+      const route = data.routes[plan.routeId];
+      const note = plan.note || (route.counts ? "计入认证" : "骑行记录");
+      return '<div class="route-stamps stamp-count-' + plan.stamps.length + '"><div class="route-label"><strong>' + route.id + '号线</strong><span>' + route.km + " km · " + htmlEscape(note) + "</span></div>" + plan.stamps.map(function (stamp) {
+        const key = plan.routeId + "-" + stamp;
+        return '<label class="stamp-check"><input type="checkbox" data-stamp="' + key + '" ' + (state.stamps[key] ? "checked" : "") + '><span>' + labels[stamp] + "</span></label>";
+      }).join("") + "</div>";
+    }).join("") + "</div>";
   }
 
-  function syncMobileNav() {
-    const buttons = Array.from(document.querySelectorAll(".mobile-jump-nav [data-jump]"));
-    if (!buttons.length) return;
-    const sections = buttons.map(function (button) {
-      const target = button.dataset.jump === "certificate"
-        ? document.getElementById("certificate-panel")
-        : document.querySelector(`[data-section="${button.dataset.jump}"]`);
-      return { button: button, target: target };
-    }).filter(function (item) { return item.target; });
-    const marker = Math.min(window.innerHeight * 0.38, 300);
-    let current = sections[0];
-    sections.forEach(function (item) {
-      if (item.target.getBoundingClientRect().top <= marker) current = item;
+  function renderPlanDay(day, printMode) {
+    const totalDistance = day.walkKm + (day.bikeKm || 0);
+    const hotel = day.hotel ? data.places[day.hotel] : null;
+    const dayCheckins = checkinsForDay(day.id);
+    return '<article class="' + (printMode ? "print-day" : "plan-day") + '"><header class="plan-day-header"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + "</h2><p>" + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? "WALK + BIKE" : "KM WALK") + "</small></div></header>" +
+      '<div class="plan-layout"><div>' + renderTimeline(day) +
+      (day.cutoff ? '<section class="cutoff-card"><strong>硬截止 · ' + htmlEscape(day.cutoff) + "</strong><p>" + htmlEscape(day.fallback) + '</p><label class="fallback-toggle"><input type="checkbox" data-fallback="' + day.id + '" ' + (state.fallbacks[day.id] ? "checked" : "") + '><span>' + (state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案") + "</span></label></section>" : "") +
+      renderStamps(day) +
+      (dayCheckins.length ? '<div class="section-heading"><h2>当天打卡点</h2><span>' + dayCheckins.length + ' 个</span></div><div class="checkin-list">' + dayCheckins.map(renderCheckinCard).join("") + "</div>" : "") +
+      '</div><aside class="plan-side">' +
+      '<section class="status-panel"><div class="status-panel-head"><h3>出发前确认</h3><span>' + confirmationsForDay(day.id).filter(function (item) { return state.confirmations[item.id]; }).length + "/" + confirmationsForDay(day.id).length + "</span></div>" + renderConfirmationRows(confirmationsForDay(day.id)) + "</section>" +
+      (hotel ? '<div class="section-heading"><h2>今晚住宿</h2></div><section class="hotel-card"><h3>' + htmlEscape(hotel.name) + "</h3><p><b>" + htmlEscape(hotel.korean) + "</b> · " + htmlEscape(hotel.address) + "</p>" + mapLinks(hotel, "步行") + "</section>" : "") +
+      '<div class="section-heading"><h2>当天备注</h2><span>自动保存</span></div><textarea class="day-notes" data-day-note="' + day.id + '" rows="5" placeholder="记录天气、班次、身体状态和临时变更……">' + htmlEscape(state.dayNotes[day.id] || "") + "</textarea></aside></div></article>";
+  }
+
+  function renderPlan() {
+    document.getElementById("plan-content").innerHTML = renderPlanDay(dayById(state.activeDay), false);
+  }
+
+  function checkinCategory(item) {
+    return data.categories[item.category] || data.categories.other;
+  }
+
+  function renderCheckinCard(item) {
+    const place = placeForCheckin(item);
+    const category = checkinCategory(item);
+    const day = dayById(item.dayId);
+    const checked = Boolean(state.checkinChecks[item.id]);
+    const detail = [item.dish, item.note].filter(Boolean).join(" · ");
+    return '<article class="checkin-card ' + (checked ? "completed" : "") + '" data-checkin-card="' + htmlEscape(item.id) + '"><div class="checkin-card-top"><div><span class="category-label">' + icon(category.icon) + htmlEscape(category.label) + '</span><h2>' + htmlEscape(place.name) + '</h2>' + (place.korean ? '<p class="checkin-korean">' + htmlEscape(place.korean) + "</p>" : "") + '</div><button class="checkin-toggle ' + (checked ? "checked" : "") + '" type="button" data-toggle-checkin="' + htmlEscape(item.id) + '" aria-label="' + (checked ? "取消打卡" : "标记已打卡") + '">' + icon("check.svg") + "</button></div>" +
+      '<div class="checkin-meta"><span>' + htmlEscape(day.date) + "</span><span>" + htmlEscape(item.priority || "想去") + "</span>" + (item.slot ? "<span>" + htmlEscape(item.slot) + "</span>" : "") + "</div>" +
+      (detail ? '<p class="checkin-detail">' + htmlEscape(detail) + "</p>" : "") +
+      (place.address ? '<p class="place-address"><b>' + htmlEscape(place.korean || place.name) + "</b> · " + htmlEscape(place.address) + "</p>" : "") +
+      (!hasCoordinates(place) ? '<p class="location-warning">定位待补充：地图将先打开搜索结果。</p>' : "") +
+      '<div class="checkin-card-actions">' + mapLinks(place, item.mode, true) +
+      (item.custom ? '<div class="custom-actions"><button type="button" data-edit-checkin="' + htmlEscape(item.id) + '" aria-label="编辑' + htmlEscape(place.name) + '" title="编辑">' + icon("pencil.svg") + '</button><button class="delete-action" type="button" data-delete-checkin="' + htmlEscape(item.id) + '" aria-label="删除' + htmlEscape(place.name) + '" title="删除">' + icon("trash-2.svg") + "</button></div>" : "") +
+      "</div></article>";
+  }
+
+  function renderCheckinFilters() {
+    const dayOptions = [{ id: "all", date: "全部日期" }].concat(data.days);
+    document.getElementById("checkin-day-filter").innerHTML = dayOptions.map(function (day) {
+      return '<button class="filter-chip" type="button" data-filter-day="' + day.id + '" aria-pressed="' + (filterState.day === day.id) + '">' + htmlEscape(day.date) + "</button>";
+    }).join("");
+    document.getElementById("checkin-category-filter").innerHTML = Object.keys(data.categories).map(function (key) {
+      return '<button class="filter-chip" type="button" data-filter-category="' + key + '" aria-pressed="' + (filterState.category === key) + '">' + htmlEscape(data.categories[key].label) + "</button>";
+    }).join("");
+  }
+
+  function renderCheckins() {
+    renderCheckinFilters();
+    const items = combinedCheckins().filter(function (item) {
+      const dayMatches = filterState.day === "all" || item.dayId === filterState.day;
+      const categoryMatches = filterState.category === "all" || item.category === filterState.category;
+      return dayMatches && categoryMatches;
+    }).sort(function (a, b) {
+      return DAY_IDS.indexOf(a.dayId) - DAY_IDS.indexOf(b.dayId);
     });
-    buttons.forEach(function (button) { button.removeAttribute("aria-current"); });
-    if (current) current.button.setAttribute("aria-current", "true");
+    document.getElementById("checkin-list").innerHTML = items.length
+      ? items.map(renderCheckinCard).join("")
+      : '<div class="empty-state">' + icon("map-pin-off.svg") + "<p>当前筛选下没有打卡点。</p></div>";
   }
 
-  function jumpToSection(section) {
-    const target = section === "certificate"
-      ? document.getElementById("certificate-panel")
-      : document.querySelector(`[data-section="${section}"]`);
-    if (!target) return;
-    const tabs = document.getElementById("day-tabs");
-    const offset = tabs ? tabs.offsetHeight + 10 : 10;
-    const top = target.getBoundingClientRect().top + window.scrollY - offset;
-    document.querySelectorAll(".mobile-jump-nav [data-jump]").forEach(function (button) {
-      if (button.dataset.jump === section) button.setAttribute("aria-current", "true");
-      else button.removeAttribute("aria-current");
-    });
-    window.scrollTo({ top: Math.max(0, top), behavior: state.reducedMotion ? "auto" : "smooth" });
+  function renderFlightCard(flight) {
+    return '<article class="flight-card"><div class="flight-card-top"><span>' + htmlEscape(flight.direction + " · " + flight.date) + '</span><strong>' + htmlEscape(flight.number) + '</strong></div><div class="flight-route"><b>' + htmlEscape(flight.from) + "</b><i></i><b>" + htmlEscape(flight.to) + '</b></div><p class="flight-time"><strong>' + htmlEscape(flight.depart) + "</strong> → " + htmlEscape(flight.arrive) + '</p><p class="flight-note">' + htmlEscape(flight.airline + " · " + flight.note) + "</p></article>";
   }
 
-  function renderCertificate() {
+  function renderMore() {
     const km = completedKm();
-    document.getElementById("certificate-panel").innerHTML = `<div class="certificate-top"><div><p class="section-kicker">CERTIFICATE</p><h2>100 km 证书</h2></div><div class="certificate-seal">${km >= 100 ? "READY" : km.toFixed(1)}<small>${km >= 100 ? "100 KM" : "KM"}</small></div></div><p>9月28日在摹瑟浦运动场官方服务点办理。纸质护照与电子护照不可混用。</p><ul class="rail-list"><li><span>服务时间</span><strong>08:30–17:00</strong></li><li><span>午休</span><strong>12:00–13:00</strong></li><li><span>停航后里程</span><strong>102.1 km</strong></li></ul>${mapLinks("hamo", "步行")}`;
-  }
+    const allConfirmations = data.confirmations;
+    const confirmed = allConfirmations.filter(function (item) { return state.confirmations[item.id]; }).length;
+    const officialLinks = [
+      ["济州实时公交", "https://bus.jeju.go.kr/"],
+      ["牛岛船运公告", "http://www.udoship.com/"],
+      ["加波岛预约 / 船班", "https://www.wonderfulis.co.kr/"],
+      ["济州偶来官网", "https://www.jejuolle.org/"]
+    ];
+    const hamo = data.places.hamo;
+    const canInstall = Boolean(deferredInstallPrompt);
+    const hasRecovery = Boolean(localStorage.getItem(RECOVERY_KEY));
 
-  function renderQuickLinks() {
-    const links = [["济州实时公交", "https://bus.jeju.go.kr/"], ["牛岛船运公告", "http://www.udoship.com/"], ["加波岛预约 / 船班", "https://www.wonderfulis.co.kr/"], ["济州偶来官网", "https://www.jejuolle.org/"]];
-    document.getElementById("quick-links").innerHTML = `<p class="section-kicker">LIVE CHECK</p><h2>出发前复核</h2><p>中秋期间交通与营业时间可能调整，每晚检查下一日。</p>${links.map(function (link) { return `<a class="quick-link" href="${link[1]}" target="_blank" rel="noopener"><span>${link[0]}</span></a>`; }).join("")}`;
+    document.getElementById("more-content").innerHTML =
+      '<div class="more-grid">' +
+        '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("plane.svg") + '<h2>航班</h2></div><span class="type-tag">以订单为准</span></div><div class="flight-pair">' + data.flights.map(renderFlightCard).join("") + "</div></section>" +
+        '<section class="more-section"><div class="more-section-head"><div>' + icon("award.svg") + '<h2>100 km证书</h2></div><span class="type-tag walk">' + (km >= 100 ? "READY" : km.toFixed(1) + " KM") + '</span></div><div class="certificate-callout"><strong>9月28日 13:00</strong><p>加波岛返港后，在11号线官方服务点办理。</p></div><ul class="fact-list"><li><span>受理时间</span><strong>09:00–11:30<br>13:00–16:30</strong></li><li><span>核心认证里程</span><strong>102.1 km</strong></li><li><span>必须携带</span><strong>本人纸质护照</strong></li><li><span>现场步骤</span><strong>QR问卷 + 验章</strong></li></ul>' + mapLinks(hamo, "步行") + "</section>" +
+        '<section class="more-section"><div class="more-section-head"><div>' + icon("briefcase.svg") + '<h2>行李与船班确认</h2></div><span class="type-tag">' + confirmed + "/" + allConfirmations.length + "</span></div>" + renderConfirmationRows(allConfirmations) + "</section>" +
+        '<section class="more-section"><div class="more-section-head"><div>' + icon("link.svg") + '<h2>官方查询</h2></div></div><div class="official-links">' + officialLinks.map(function (link) {
+          return '<a class="official-link" href="' + link[1] + '" target="_blank" rel="noopener"><span>' + htmlEscape(link[0]) + "</span>" + icon("external-link.svg") + "</a>";
+        }).join("") + "</div></section>" +
+        '<section class="more-section"><div class="more-section-head"><div>' + icon("settings-2.svg") + '<h2>显示与安装</h2></div></div><div class="settings-list"><label class="setting-row"><span>紧凑显示</span><span class="toggle"><input id="compact-toggle" type="checkbox" ' + (state.compact ? "checked" : "") + '><i></i></span></label><div class="setting-row"><span>安装到手机桌面</span><button id="install-button" class="secondary-button" type="button" ' + (canInstall ? "" : "disabled") + ">" + icon("download.svg") + (canInstall ? "安装" : "由浏览器提供") + "</button></div></div></section>" +
+        '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("notebook-pen.svg") + '<h2>全程备忘</h2></div><span class="type-tag">自动保存</span></div><textarea id="trip-notes" rows="6" placeholder="车票、天气、临时变更……">' + htmlEscape(state.notes) + "</textarea></section>" +
+        '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("database.svg") + '<h2>数据备份</h2></div><span class="type-tag">本机保存</span></div><p>导出文件包含打卡点、盖章和备注，可在另一台设备导入。</p><div class="data-actions"><button id="export-button" class="secondary-button" type="button">' + icon("download.svg") + '导出备份</button><button id="import-button" class="secondary-button" type="button">' + icon("upload.svg") + '导入备份</button>' + (hasRecovery ? '<button id="recovery-button" class="secondary-button" type="button">' + icon("history.svg") + "恢复导入前数据</button>" : "") + '<button id="reset-button" class="text-button danger-button" type="button">恢复默认</button></div></section>' +
+      "</div>";
   }
 
   function renderAll() {
-    document.body.dataset.theme = state.theme;
     document.body.dataset.density = state.compact ? "compact" : "comfortable";
-    document.body.dataset.reducedMotion = String(state.reducedMotion);
-    renderSummary(); renderTabs(); renderActiveDay(); renderCertificate(); renderQuickLinks();
-    document.getElementById("trip-notes").value = state.notes;
-    document.getElementById("theme-select").value = state.theme;
-    document.getElementById("density-toggle").checked = state.compact;
-    document.getElementById("motion-toggle").checked = state.reducedMotion;
+    document.querySelectorAll(".app-view").forEach(function (view) {
+      view.hidden = view.dataset.view !== state.activeView;
+    });
+    document.querySelectorAll("[data-view-target]").forEach(function (button) {
+      if (!button.closest(".app-dock")) return;
+      if (button.dataset.viewTarget === state.activeView) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+    renderHero();
+    renderDateStrip("today-day-tabs");
+    renderDateStrip("plan-day-tabs");
+    renderToday();
+    renderPlan();
+    renderCheckins();
+    renderMore();
+    updateNetworkStatus();
+  }
+
+  function switchView(viewName, preserveScroll) {
+    if (!ALLOWED_VIEWS.includes(viewName)) return;
+    state.activeView = viewName;
+    saveState();
+    renderAll();
+    if (!preserveScroll) window.scrollTo({ top: 0, behavior: "auto" });
   }
 
   function selectDay(dayId) {
-    state.activeDay = dayId; saveState(); renderTabs(); renderActiveDay();
-    window.scrollTo({ top: document.getElementById("day-tabs").offsetTop, behavior: state.reducedMotion ? "auto" : "smooth" });
+    if (!DAY_IDS.includes(dayId)) return;
+    state.activeDay = dayId;
+    saveState();
+    renderAll();
   }
 
-  function initControls() {
-    const tweaks = document.getElementById("tweaks");
-    let scrollFrame = null;
-    window.addEventListener("scroll", function () {
-      if (scrollFrame) return;
-      scrollFrame = window.requestAnimationFrame(function () { scrollFrame = null; syncMobileNav(); });
-    }, { passive: true });
+  function showToast(message, actionLabel, actionName) {
+    const toast = document.getElementById("toast");
+    window.clearTimeout(toastTimer);
+    toast.innerHTML = "<span>" + htmlEscape(message) + "</span>" + (actionLabel ? '<button type="button" data-toast-action="' + htmlEscape(actionName) + '">' + htmlEscape(actionLabel) + "</button>" : "");
+    toast.hidden = false;
+    toastTimer = window.setTimeout(function () { toast.hidden = true; }, actionLabel ? 5000 : 2300);
+  }
+
+  function populateCheckinDayOptions() {
+    document.getElementById("checkin-day").innerHTML = data.days.map(function (day) {
+      return '<option value="' + day.id + '">' + htmlEscape(day.date + " · " + day.label) + "</option>";
+    }).join("");
+  }
+
+  function resetCheckinForm() {
+    const form = document.getElementById("checkin-form");
+    form.reset();
+    document.getElementById("checkin-id").value = "";
+    document.getElementById("checkin-day").value = state.activeDay;
+    document.getElementById("checkin-form-title").textContent = "新增打卡点";
+    document.getElementById("checkin-form-error").textContent = "";
+    document.getElementById("location-state").textContent = "可稍后补充";
+    document.getElementById("location-state").className = "";
+    document.querySelector(".advanced-fields").open = false;
+  }
+
+  function openCheckinDialog(item) {
+    resetCheckinForm();
+    if (item) {
+      document.getElementById("checkin-id").value = item.id;
+      document.getElementById("checkin-name").value = item.name;
+      document.getElementById("checkin-day").value = item.dayId;
+      document.getElementById("checkin-mode").value = item.mode;
+      document.querySelector('input[name="category"][value="' + item.category + '"]').checked = true;
+      document.getElementById("checkin-map-input").value = item.mapInput || "";
+      document.getElementById("checkin-lat").value = item.lat == null ? "" : item.lat;
+      document.getElementById("checkin-lng").value = item.lng == null ? "" : item.lng;
+      document.getElementById("checkin-korean").value = item.korean || "";
+      document.getElementById("checkin-address").value = item.address || "";
+      document.getElementById("checkin-priority").value = item.priority || "想去";
+      document.getElementById("checkin-slot").value = item.slot || "";
+      document.getElementById("checkin-dish").value = item.dish || "";
+      document.getElementById("checkin-note").value = item.note || "";
+      document.getElementById("checkin-form-title").textContent = "编辑打卡点";
+      document.querySelector(".advanced-fields").open = Boolean(item.korean || item.address || item.slot || item.dish || item.note);
+      updateLocationState();
+    }
+    document.getElementById("checkin-dialog").showModal();
+    window.setTimeout(function () { document.getElementById("checkin-name").focus(); }, 80);
+  }
+
+  function closeCheckinDialog() {
+    document.getElementById("checkin-dialog").close();
+  }
+
+  function parseCoordinates(value) {
+    const input = cleanText(value, 1000).trim();
+    if (!input) return null;
+    let decoded = input;
+    try { decoded = decodeURIComponent(input); } catch (error) { decoded = input; }
+
+    const queryLat = decoded.match(/[?&#](?:lat|latitude)=(-?\d+(?:\.\d+)?)/i);
+    const queryLng = decoded.match(/[?&#](?:lng|lon|longitude)=(-?\d+(?:\.\d+)?)/i);
+    if (queryLat && queryLng) {
+      const lat = Number(queryLat[1]);
+      const lng = Number(queryLng[1]);
+      if (isValidCoordinate(lat, lng)) return { lat, lng };
+    }
+
+    const pairs = Array.from(decoded.matchAll(/(-?\d{1,3}(?:\.\d{3,}))\s*[,/]\s*(-?\d{1,3}(?:\.\d{3,}))/g));
+    for (const match of pairs) {
+      const first = Number(match[1]);
+      const second = Number(match[2]);
+      if (first >= 30 && first <= 40 && second >= 120 && second <= 135) return { lat: first, lng: second };
+      if (first >= 120 && first <= 135 && second >= 30 && second <= 40) return { lat: second, lng: first };
+      if (isValidCoordinate(first, second)) return { lat: first, lng: second };
+      if (isValidCoordinate(second, first)) return { lat: second, lng: first };
+    }
+    return null;
+  }
+
+  function updateLocationState(message, statusClass) {
+    const status = document.getElementById("location-state");
+    const lat = Number(document.getElementById("checkin-lat").value);
+    const lng = Number(document.getElementById("checkin-lng").value);
+    if (message) {
+      status.textContent = message;
+      status.className = statusClass || "";
+    } else if (isValidCoordinate(lat, lng)) {
+      status.textContent = "精确定位已就绪";
+      status.className = "success";
+    } else {
+      status.textContent = "可稍后补充";
+      status.className = "";
+    }
+  }
+
+  function parseLocationIntoForm() {
+    const value = document.getElementById("checkin-map-input").value;
+    const coordinates = parseCoordinates(value);
+    if (!coordinates) {
+      updateLocationState("链接中未找到坐标", "error");
+      return false;
+    }
+    document.getElementById("checkin-lat").value = coordinates.lat.toFixed(7);
+    document.getElementById("checkin-lng").value = coordinates.lng.toFixed(7);
+    updateLocationState("精确定位已解析", "success");
+    return true;
+  }
+
+  function useCurrentLocation() {
+    const button = document.getElementById("use-location");
+    if (!navigator.geolocation) {
+      updateLocationState("此浏览器不支持定位", "error");
+      return;
+    }
+    button.disabled = true;
+    button.textContent = "正在定位…";
+    updateLocationState("正在请求手机定位", "");
+    navigator.geolocation.getCurrentPosition(function (position) {
+      document.getElementById("checkin-lat").value = position.coords.latitude.toFixed(7);
+      document.getElementById("checkin-lng").value = position.coords.longitude.toFixed(7);
+      button.innerHTML = icon("navigation.svg") + "使用当前位置";
+      button.disabled = false;
+      updateLocationState("当前位置已保存", "success");
+    }, function (error) {
+      const message = error.code === 1 ? "未获得定位权限" : "暂时无法取得位置";
+      button.innerHTML = icon("navigation.svg") + "使用当前位置";
+      button.disabled = false;
+      updateLocationState(message, "error");
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+  }
+
+  function submitCheckinForm(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const name = cleanText(formData.get("name"), 120).trim();
+    const dayId = cleanText(formData.get("dayId"), 10);
+    const error = document.getElementById("checkin-form-error");
+    if (!name || !DAY_IDS.includes(dayId)) {
+      error.textContent = "请填写地点名称并选择日期。";
+      return;
+    }
+
+    const rawLat = cleanText(formData.get("lat"), 40).trim();
+    const rawLng = cleanText(formData.get("lng"), 40).trim();
+    let lat = rawLat ? Number(rawLat) : null;
+    let lng = rawLng ? Number(rawLng) : null;
+    const mapInput = cleanText(formData.get("mapInput"), 1000).trim();
+    if ((!isValidCoordinate(lat, lng)) && mapInput) {
+      const parsed = parseCoordinates(mapInput);
+      if (parsed) {
+        lat = parsed.lat;
+        lng = parsed.lng;
+      }
+    }
+    if ((rawLat || rawLng) && !isValidCoordinate(lat, lng)) {
+      error.textContent = "经纬度不完整或超出有效范围。";
+      return;
+    }
+
+    const existingId = document.getElementById("checkin-id").value;
+    const existing = state.customCheckins.find(function (item) { return item.id === existingId; });
+    const item = sanitizeCheckin({
+      id: existingId || createId(),
+      name,
+      dayId,
+      category: formData.get("category"),
+      mode: formData.get("mode"),
+      mapInput,
+      lat,
+      lng,
+      korean: formData.get("korean"),
+      address: formData.get("address"),
+      priority: formData.get("priority"),
+      slot: formData.get("slot"),
+      dish: formData.get("dish"),
+      note: formData.get("note"),
+      createdAt: existing ? existing.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    if (!item) {
+      error.textContent = "无法保存，请检查必填内容。";
+      return;
+    }
+
+    if (existing) {
+      state.customCheckins = state.customCheckins.map(function (current) { return current.id === item.id ? item : current; });
+    } else {
+      state.customCheckins.push(item);
+    }
+    state.checkinChecks[item.id] = Boolean(state.checkinChecks[item.id]);
+    state.activeDay = item.dayId;
+    saveState();
+    closeCheckinDialog();
+    switchView("checkins");
+    filterState.day = item.dayId;
+    renderCheckins();
+    showToast(existing ? "打卡点已更新" : "打卡点已保存");
+  }
+
+  function deleteCheckin(id) {
+    const index = state.customCheckins.findIndex(function (item) { return item.id === id; });
+    if (index < 0) return;
+    const item = state.customCheckins[index];
+    deletedCheckin = { item, index, checked: Boolean(state.checkinChecks[id]) };
+    state.customCheckins.splice(index, 1);
+    delete state.checkinChecks[id];
+    saveState();
+    renderAll();
+    showToast("已删除“" + item.name + "”", "撤销", "undo-delete");
+  }
+
+  function undoDelete() {
+    if (!deletedCheckin) return;
+    state.customCheckins.splice(deletedCheckin.index, 0, deletedCheckin.item);
+    state.checkinChecks[deletedCheckin.item.id] = deletedCheckin.checked;
+    deletedCheckin = null;
+    saveState();
+    renderAll();
+    showToast("打卡点已恢复");
+  }
+
+  async function exportBackup() {
+    const payload = {
+      product: "jeju-olle-trip",
+      version: 4,
+      exportedAt: new Date().toISOString(),
+      state
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const fileName = "jeju-olle-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+    const file = new File([blob], fileName, { type: "application/json" });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "济州偶来行程备份" });
+        return;
+      }
+    } catch (error) {
+      if (error.name === "AbortError") return;
+    }
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast("备份文件已导出");
+  }
+
+  async function importBackup(file) {
+    try {
+      if (!file || file.size > 2 * 1024 * 1024) throw new Error("文件过大");
+      const parsed = JSON.parse(await file.text());
+      const incoming = parsed && parsed.product === "jeju-olle-trip" ? parsed.state : parsed;
+      let nextState;
+      if (incoming && incoming.version === 4) nextState = normalizeState(incoming);
+      else if (incoming && incoming.version === 3) nextState = migrateLegacy(incoming);
+      else throw new Error("不支持的备份版本");
+      localStorage.setItem(RECOVERY_KEY, JSON.stringify(state));
+      state = nextState;
+      saveState();
+      renderAll();
+      showToast("备份已导入");
+    } catch (error) {
+      showToast("导入失败：" + error.message);
+    } finally {
+      document.getElementById("import-file").value = "";
+    }
+  }
+
+  function recoverPreviousState() {
+    try {
+      const recovery = JSON.parse(localStorage.getItem(RECOVERY_KEY));
+      state = normalizeState(recovery);
+      saveState();
+      localStorage.removeItem(RECOVERY_KEY);
+      renderAll();
+      showToast("已恢复导入前的数据");
+    } catch (error) {
+      showToast("没有可恢复的数据");
+    }
+  }
+
+  function resetState() {
+    if (!window.confirm("确认清除新增地点、盖章、确认项和备注，恢复默认行程？")) return;
+    state = defaultState();
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(RECOVERY_KEY);
+    saveState();
+    renderAll();
+    showToast("已恢复默认行程");
+  }
+
+  function updateNetworkStatus() {
+    const status = document.getElementById("network-status");
+    const online = navigator.onLine;
+    status.classList.toggle("offline", !online);
+    status.lastChild.textContent = online ? "在线" : "离线可用";
+  }
+
+  function initializeInstall() {
+    window.addEventListener("beforeinstallprompt", function (event) {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      document.getElementById("install-shortcut").hidden = false;
+      renderMore();
+    });
+    window.addEventListener("appinstalled", function () {
+      deferredInstallPrompt = null;
+      document.getElementById("install-shortcut").hidden = true;
+      showToast("已安装到手机桌面");
+      renderMore();
+    });
+  }
+
+  async function promptInstall() {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    document.getElementById("install-shortcut").hidden = true;
+    renderMore();
+  }
+
+  function initializeServiceWorker() {
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.register("./sw.js").then(function (registration) {
+      if (registration.waiting && navigator.serviceWorker.controller) {
+        waitingWorker = registration.waiting;
+        document.getElementById("update-banner").hidden = false;
+      }
+      registration.addEventListener("updatefound", function () {
+        const worker = registration.installing;
+        if (!worker) return;
+        worker.addEventListener("statechange", function () {
+          if (worker.state === "installed" && navigator.serviceWorker.controller) {
+            waitingWorker = worker;
+            document.getElementById("update-banner").hidden = false;
+          }
+        });
+      });
+    }).catch(function (error) {
+      console.info("离线缓存暂不可用。", error.message);
+    });
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!updateReloadRequested) return;
+      updateReloadRequested = false;
+      window.location.reload();
+    });
+  }
+
+  function bindEvents() {
     document.addEventListener("click", function (event) {
       const mapLink = event.target.closest("[data-map-app]");
-      if (mapLink) openMapApp(event, mapLink);
-      const tab = event.target.closest("[data-day]");
-      if (tab) selectDay(tab.dataset.day);
-      const jump = event.target.closest("[data-jump]");
-      if (jump) jumpToSection(jump.dataset.jump);
+      if (mapLink) {
+        openMapApp(event, mapLink);
+        return;
+      }
+      const viewButton = event.target.closest("[data-view-target]");
+      if (viewButton) {
+        switchView(viewButton.dataset.viewTarget);
+        return;
+      }
+      const dayButton = event.target.closest("[data-day]");
+      if (dayButton) {
+        selectDay(dayButton.dataset.day);
+        return;
+      }
+      if (event.target.closest("[data-open-checkin]")) {
+        openCheckinDialog();
+        return;
+      }
+      if (event.target.closest("[data-close-checkin]")) {
+        closeCheckinDialog();
+        return;
+      }
+      const toggleCheckin = event.target.closest("[data-toggle-checkin]");
+      if (toggleCheckin) {
+        const id = toggleCheckin.dataset.toggleCheckin;
+        state.checkinChecks[id] = !state.checkinChecks[id];
+        saveState();
+        renderAll();
+        return;
+      }
+      const editCheckin = event.target.closest("[data-edit-checkin]");
+      if (editCheckin) {
+        const item = state.customCheckins.find(function (current) { return current.id === editCheckin.dataset.editCheckin; });
+        if (item) openCheckinDialog(item);
+        return;
+      }
+      const deleteButton = event.target.closest("[data-delete-checkin]");
+      if (deleteButton) {
+        deleteCheckin(deleteButton.dataset.deleteCheckin);
+        return;
+      }
+      const dayFilter = event.target.closest("[data-filter-day]");
+      if (dayFilter) {
+        filterState.day = dayFilter.dataset.filterDay;
+        renderCheckins();
+        return;
+      }
+      const categoryFilter = event.target.closest("[data-filter-category]");
+      if (categoryFilter) {
+        filterState.category = categoryFilter.dataset.filterCategory;
+        renderCheckins();
+        return;
+      }
+      const toastAction = event.target.closest("[data-toast-action]");
+      if (toastAction && toastAction.dataset.toastAction === "undo-delete") {
+        undoDelete();
+        return;
+      }
+      if (event.target.closest("#parse-location")) {
+        parseLocationIntoForm();
+        return;
+      }
+      if (event.target.closest("#use-location")) {
+        useCurrentLocation();
+        return;
+      }
+      if (event.target.closest("#export-button")) {
+        exportBackup();
+        return;
+      }
+      if (event.target.closest("#import-button")) {
+        document.getElementById("import-file").click();
+        return;
+      }
+      if (event.target.closest("#recovery-button")) {
+        recoverPreviousState();
+        return;
+      }
+      if (event.target.closest("#reset-button")) {
+        resetState();
+        return;
+      }
+      if (event.target.closest("#print-button")) {
+        window.print();
+        return;
+      }
+      if (event.target.closest("#install-button") || event.target.closest("#install-shortcut")) {
+        promptInstall();
+        return;
+      }
+      if (event.target.closest("#apply-update") && waitingWorker) {
+        updateReloadRequested = true;
+        waitingWorker.postMessage({ type: "SKIP_WAITING" });
+      }
     });
+
     document.addEventListener("change", function (event) {
-      if (event.target.matches("[data-stamp]")) { state.stamps[event.target.dataset.stamp] = event.target.checked; saveState(); renderSummary(); renderCertificate(); }
-      if (event.target.matches("[data-food-check]")) { state.foodChecks[event.target.dataset.foodCheck] = event.target.checked; saveState(); renderActiveDay(); }
-      if (event.target.matches("[data-fallback]")) { state.fallbacks[event.target.dataset.fallback] = event.target.checked; saveState(); renderActiveDay(); }
+      if (event.target.matches("[data-stamp]")) {
+        state.stamps[event.target.dataset.stamp] = event.target.checked;
+        saveState();
+        renderAll();
+      } else if (event.target.matches("[data-confirmation]")) {
+        state.confirmations[event.target.dataset.confirmation] = event.target.checked;
+        saveState();
+        renderAll();
+      } else if (event.target.matches("[data-fallback]")) {
+        state.fallbacks[event.target.dataset.fallback] = event.target.checked;
+        saveState();
+        renderAll();
+      } else if (event.target.id === "compact-toggle") {
+        state.compact = event.target.checked;
+        saveState();
+        renderAll();
+      } else if (event.target.id === "import-file") {
+        importBackup(event.target.files[0]);
+      }
     });
-    document.addEventListener("input", function (event) { if (event.target.matches("[data-day-note]")) { state.dayNotes[event.target.dataset.dayNote] = event.target.value; saveState(); } });
-    document.getElementById("tweaks-open").addEventListener("click", function () { tweaks.hidden = false; document.getElementById("tweaks-open").hidden = true; });
-    document.getElementById("mobile-settings-open").addEventListener("click", function () { tweaks.hidden = false; document.getElementById("tweaks-open").hidden = true; });
-    document.getElementById("tweaks-close").addEventListener("click", function () { tweaks.hidden = true; document.getElementById("tweaks-open").hidden = false; });
-    document.getElementById("theme-select").addEventListener("change", function (event) { state.theme = event.target.value; document.body.dataset.theme = state.theme; saveState(); });
-    document.getElementById("density-toggle").addEventListener("change", function (event) { state.compact = event.target.checked; document.body.dataset.density = state.compact ? "compact" : "comfortable"; saveState(); });
-    document.getElementById("motion-toggle").addEventListener("change", function (event) { state.reducedMotion = event.target.checked; document.body.dataset.reducedMotion = String(state.reducedMotion); saveState(); });
-    document.getElementById("trip-notes").addEventListener("input", function (event) { state.notes = event.target.value; saveState(); });
-    document.getElementById("print-button").addEventListener("click", function () { window.print(); });
-    document.getElementById("reset-button").addEventListener("click", function () { if (!window.confirm("确认清除所有盖章、备注和显示设置，恢复初始计划？")) return; localStorage.removeItem(STORAGE_KEY); state = { ...defaults }; renderAll(); tweaks.hidden = true; document.getElementById("tweaks-open").hidden = false; });
+
+    document.addEventListener("input", function (event) {
+      if (event.target.matches("[data-day-note]")) {
+        state.dayNotes[event.target.dataset.dayNote] = event.target.value.slice(0, 5000);
+        saveState();
+      } else if (event.target.id === "trip-notes") {
+        state.notes = event.target.value.slice(0, 20000);
+        saveState();
+      } else if (event.target.id === "checkin-lat" || event.target.id === "checkin-lng") {
+        updateLocationState();
+      }
+    });
+
+    document.getElementById("checkin-form").addEventListener("submit", submitCheckinForm);
+    document.getElementById("checkin-dialog").addEventListener("click", function (event) {
+      if (event.target === event.currentTarget) closeCheckinDialog();
+    });
+    document.getElementById("checkin-map-input").addEventListener("blur", function () {
+      if (this.value.trim()) parseLocationIntoForm();
+    });
+    window.addEventListener("online", updateNetworkStatus);
+    window.addEventListener("offline", updateNetworkStatus);
   }
 
   function configurePrint() {
-    window.addEventListener("beforeprint", function () { printRestoreDay = state.activeDay; document.getElementById("day-view").innerHTML = days.map(function (day) { return renderDay(day, true); }).join(""); });
-    window.addEventListener("afterprint", function () { state.activeDay = printRestoreDay || state.activeDay; renderActiveDay(); printRestoreDay = null; });
+    window.addEventListener("beforeprint", function () {
+      printRestore = document.getElementById("plan-content").innerHTML;
+      document.getElementById("plan-content").innerHTML = data.days.map(function (day) {
+        return renderPlanDay(day, true);
+      }).join("");
+    });
+    window.addEventListener("afterprint", function () {
+      if (printRestore != null) document.getElementById("plan-content").innerHTML = printRestore;
+      printRestore = null;
+    });
   }
 
-  document.getElementById("day-view").appendChild(document.getElementById("loading-template").content.cloneNode(true));
-  initControls(); configurePrint(); renderAll();
+  populateCheckinDayOptions();
+  bindEvents();
+  configurePrint();
+  initializeInstall();
+  initializeServiceWorker();
+  renderAll();
 })();

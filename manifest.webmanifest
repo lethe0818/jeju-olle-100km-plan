@@ -1,0 +1,26 @@
+{
+  "name": "济州偶来100 km行程助手",
+  "short_name": "济州偶来",
+  "description": "2026年9月济州偶来100 km徒步与交通计划",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#eef2ef",
+  "theme_color": "#073f43",
+  "icons": [
+    {
+      "src": "assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
