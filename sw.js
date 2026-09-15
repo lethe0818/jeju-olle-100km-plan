@@ -1,4 +1,4 @@
-const CACHE_NAME = "jeju-olle-app-v4-20260915-5";
+const CACHE_NAME = "jeju-olle-app-v4-ledger-20260915-3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -39,6 +39,8 @@ const APP_SHELL = [
   "./assets/icons/trash-2.svg",
   "./assets/icons/upload.svg",
   "./assets/icons/utensils.svg",
+  "./assets/icons/wallet-cards.svg",
+  "./assets/icons/receipt-text.svg",
   "./assets/icons/x.svg"
 ];
 
@@ -67,15 +69,7 @@ self.addEventListener("fetch", function (event) {
 
   if (event.request.mode === "navigate") {
     event.respondWith(caches.match("./index.html").then(function (cached) {
-      if (cached) {
-        fetch(event.request).then(function (response) {
-          if (!response.ok) return;
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put("./index.html", response.clone());
-          });
-        }).catch(function () {});
-        return cached;
-      }
+      if (cached) return cached;
       return fetch(event.request);
     }));
     return;

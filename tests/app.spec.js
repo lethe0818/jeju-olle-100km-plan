@@ -43,7 +43,8 @@ test("mobile custom check-in flow", async ({ page }) => {
   await page.goto(url);
   await expect(page.locator("#today-title")).toBeVisible();
   await waitForAppWorker(page);
-  await page.locator("[data-open-checkin]").last().click();
+  await page.locator("[data-open-quick-add]").click();
+  await page.locator("[data-quick-checkin]").click();
   await page.locator("#checkin-name").fill("测试海景台");
   await page.locator("#checkin-day").selectOption("0926");
   await page.locator('input[name="category"][value="scenic"] + span').click();
@@ -163,8 +164,112 @@ test("backup validation, coordinate fallback, and location denial", async ({ bro
   expect(saved.customCheckins[0].lat).toBeNull();
   expect(saved.customCheckins[0].lng).toBeNull();
 
-  await page.locator("[data-open-checkin]").last().click();
+  await page.locator("[data-open-quick-add]").click();
+  await page.locator("[data-quick-checkin]").click();
   await page.locator("#use-location").click();
   await expect(page.locator("#location-state")).toContainText("未获得定位权限");
+  await context.close();
+});
+
+test("mobile travel ledger, dual currency, edit, undo, filters and backup", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(url);
+  await waitForAppWorker(page);
+
+  await page.locator("[data-open-quick-add]").click();
+  await expect(page.locator("#quick-add-dialog")).toBeVisible();
+  await page.locator("[data-quick-expense]").click();
+  await expect(page.locator("#expense-dialog")).toBeVisible();
+  await page.waitForTimeout(260);
+  await page.screenshot({ path: "test-results/ledger-form-mobile-390.png" });
+  await page.locator("#expense-title").fill("机场出租车");
+  await page.locator("#expense-amount").fill("0x10");
+  await page.locator("#expense-form button[type=submit]").click();
+  await expect(page.locator("#expense-form-error")).toContainText("韩元请输入");
+  await page.locator("#expense-amount").fill("18,500");
+  await page.locator("#expense-day").selectOption("0924");
+  await page.locator("#expense-form button[type=submit]").click();
+  await expect(page.locator("[data-expense-row]", { hasText: "机场出租车" })).toBeVisible();
+  await expect(page.locator(".expense-total-grid")).toContainText("₩18,500");
+
+  await page.locator(".expense-ledger [data-open-expense]").click();
+  await page.locator("#expense-title").fill("花生曲奇");
+  await page.locator("#expense-amount").fill("25.50");
+  await page.locator('input[name="currency"][value="CNY"] + span').click();
+  await page.locator('input[name="expenseCategory"][value="food"] + span').click();
+  await page.locator("#expense-day").selectOption("0925");
+  await page.locator("#expense-form button[type=submit]").click();
+  await expect(page.locator(".expense-total-grid")).toContainText("¥25.5");
+  await expect(page.locator(".expense-total-grid")).toContainText("₩18,500");
+  await page.locator('[data-expense-filter="0924"]').click();
+  await expect(page.locator("[data-expense-row]", { hasText: "机场出租车" })).toBeVisible();
+  await expect(page.locator("[data-expense-row]", { hasText: "花生曲奇" })).toHaveCount(0);
+  await page.locator('[data-expense-filter="all"]').click();
+
+  await page.locator("[data-expense-row]", { hasText: "机场出租车" }).locator("[data-edit-expense]").click();
+  await page.locator("#expense-amount").fill("20000");
+  await page.locator("#expense-form button[type=submit]").click();
+  await expect(page.locator(".expense-total-grid")).toContainText("₩20,000");
+  await page.locator("[data-expense-row]", { hasText: "机场出租车" }).locator("[data-delete-expense]").click();
+  await page.locator('[data-toast-action="undo-expense"]').click();
+  await expect(page.locator("[data-expense-row]", { hasText: "机场出租车" })).toBeVisible();
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#export-button").click();
+  const download = await downloadPromise;
+  const backup = JSON.parse(fs.readFileSync(await download.path(), "utf8"));
+  expect(backup.state.expenses).toHaveLength(2);
+  expect(backup.state.expenses.find(expense => expense.title === "机场出租车").amount).toBe(20000);
+
+  await page.reload();
+  await page.getByRole("button", { name: "更多" }).click();
+  await expect(page.locator("[data-expense-row]")).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  expect(errors).toEqual([]);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.screenshot({ path: "test-results/ledger-mobile-390.png" });
+  await page.setViewportSize({ width: 390, height: 600 });
+  await page.locator(".expense-ledger [data-open-expense]").click();
+  await page.locator("#expense-note").fill("短屏幕表单滚动检查");
+  await page.locator("#expense-form button[type=submit]").click();
+  await expect(page.locator("#expense-form-error")).toContainText("请填写项目");
+  expect(await page.evaluate(() => document.querySelector("#expense-dialog form").scrollHeight > document.querySelector("#expense-dialog form").clientHeight)).toBe(true);
+  await page.screenshot({ path: "test-results/ledger-form-short-390.png" });
+  await context.close();
+});
+
+test("expense import validation preserves earlier version 4 data", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 768, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(url);
+  await page.getByRole("button", { name: "更多" }).click();
+
+  const oldBackup = { version: 4, activeView: "more", activeDay: "0928", customCheckins: [{ id: "old", name: "原有打卡点", dayId: "0928", category: "food" }] };
+  await page.locator("#import-file").setInputFiles({ name: "old.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(oldBackup)) });
+  let state = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")));
+  expect(state.customCheckins).toHaveLength(1);
+  expect(state.expenses).toEqual([]);
+
+  const mixedBackup = { version: 4, activeView: "more", expenses: [
+    { id: "valid", title: "晚餐", dayId: "0928", category: "food", amount: 12000, currency: "KRW", payment: "cash" },
+    { id: "bad", title: "异常金额", dayId: "0928", category: "food", amount: -5, currency: "KRW" },
+    { id: "bad-day", title: "异常日期", dayId: "0930", category: "food", amount: 5, currency: "KRW" }
+  ] };
+  await page.locator("#import-file").setInputFiles({ name: "mixed.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(mixedBackup)) });
+  state = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")));
+  expect(state.expenses).toHaveLength(1);
+  await page.locator("#recovery-button").click();
+  state = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")));
+  expect(state.customCheckins).toHaveLength(1);
+  expect(state.expenses).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.screenshot({ path: "test-results/ledger-tablet-768.png" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.screenshot({ path: "test-results/ledger-desktop-1440.png" });
   await context.close();
 });

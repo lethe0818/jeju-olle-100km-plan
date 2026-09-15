@@ -8,12 +8,24 @@
   const ALLOWED_VIEWS = ["today", "plan", "checkins", "more"];
   const ALLOWED_MODES = ["步行", "公交", "打车", "骑行"];
   const DAY_IDS = data.days.map(function (day) { return day.id; });
+  const EXPENSE_CATEGORIES = {
+    transport: { label: "交通", icon: "navigation.svg" },
+    food: { label: "餐饮", icon: "utensils.svg" },
+    stay: { label: "住宿", icon: "house.svg" },
+    ticket: { label: "门票", icon: "bookmark.svg" },
+    shopping: { label: "购物", icon: "shopping-bag.svg" },
+    other: { label: "其他", icon: "ellipsis.svg" }
+  };
+  const EXPENSE_PAYMENTS = { card: "银行卡", cash: "现金", alipay: "支付宝", wechat: "微信", other: "其他" };
+  const EXPENSE_CURRENCIES = ["KRW", "CNY"];
   const filterState = { day: "all", category: "all" };
+  let expenseDayFilter = "all";
   let state = loadState();
   let deferredInstallPrompt = null;
   let waitingWorker = null;
   let updateReloadRequested = false;
   let deletedCheckin = null;
+  let deletedExpense = null;
   let toastTimer = null;
   let printRestore = null;
 
@@ -36,6 +48,7 @@
       stamps: {},
       checkinChecks: {},
       customCheckins: [],
+      expenses: [],
       confirmations: {},
       fallbacks: {}
     };
@@ -88,6 +101,29 @@
     };
   }
 
+  function sanitizeExpense(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const title = cleanText(raw.title, 120).trim();
+    const dayId = DAY_IDS.includes(raw.dayId) ? raw.dayId : "";
+    const amount = Number(raw.amount);
+    const currency = EXPENSE_CURRENCIES.includes(raw.currency) ? raw.currency : "KRW";
+    if (!title || !dayId || !Number.isFinite(amount) || amount <= 0 || amount > 999999999999) return null;
+    const roundedAmount = currency === "KRW" ? Math.round(amount) : Math.round(amount * 100) / 100;
+    if (roundedAmount <= 0) return null;
+    return {
+      id: cleanText(raw.id, 100) || createId(),
+      title,
+      dayId,
+      category: Object.hasOwn(EXPENSE_CATEGORIES, raw.category) ? raw.category : "other",
+      amount: roundedAmount,
+      currency,
+      payment: Object.hasOwn(EXPENSE_PAYMENTS, raw.payment) ? raw.payment : "card",
+      note: cleanText(raw.note, 500).trim(),
+      createdAt: cleanText(raw.createdAt, 40) || new Date().toISOString(),
+      updatedAt: cleanText(raw.updatedAt, 40) || new Date().toISOString()
+    };
+  }
+
   function normalizeState(raw) {
     const defaults = defaultState();
     if (!raw || typeof raw !== "object") return defaults;
@@ -103,6 +139,7 @@
       stamps: cleanBooleanMap(raw.stamps, 100),
       checkinChecks: cleanBooleanMap(raw.checkinChecks || raw.foodChecks, 1000),
       customCheckins: Array.isArray(raw.customCheckins) ? raw.customCheckins.slice(0, 500).map(sanitizeCheckin).filter(Boolean) : [],
+      expenses: Array.isArray(raw.expenses) ? raw.expenses.slice(0, 2000).map(sanitizeExpense).filter(Boolean) : [],
       confirmations: cleanBooleanMap(raw.confirmations, 100),
       fallbacks: cleanBooleanMap(raw.fallbacks, 100)
     };
@@ -119,6 +156,7 @@
       stamps: raw.stamps,
       checkinChecks: raw.foodChecks,
       customCheckins: [],
+      expenses: [],
       confirmations: {},
       fallbacks: raw.fallbacks
     });
@@ -280,6 +318,31 @@
     return data.defaultCheckins.map(function (item) { return Object.assign({ custom: false }, item); }).concat(state.customCheckins);
   }
 
+  function expensesForDay(dayId) {
+    return state.expenses.filter(function (expense) { return expense.dayId === dayId; });
+  }
+
+  function expenseTotals(items) {
+    return items.reduce(function (totals, expense) {
+      totals[expense.currency] += expense.amount;
+      totals.count += 1;
+      return totals;
+    }, { KRW: 0, CNY: 0, count: 0 });
+  }
+
+  function formatMoney(amount, currency) {
+    const value = new Intl.NumberFormat("zh-CN", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: currency === "KRW" ? 0 : 2
+    }).format(amount || 0);
+    return (currency === "KRW" ? "₩" : "¥") + value;
+  }
+
+  function renderTodayExpensePanel(dayId) {
+    const totals = expenseTotals(expensesForDay(dayId));
+    return '<section class="status-panel today-expense"><div class="status-panel-head"><h3>当天花销</h3><span>' + totals.count + ' 笔</span></div><div class="today-money"><strong>' + formatMoney(totals.KRW, "KRW") + '</strong><strong>' + formatMoney(totals.CNY, "CNY") + '</strong></div><div class="data-actions"><button class="secondary-button" type="button" data-open-expense>' + icon("receipt-text.svg") + "记一笔</button></div></section>";
+  }
+
   function placeForCheckin(item) {
     if (item.custom) {
       return {
@@ -360,6 +423,7 @@
       '</div><aside class="today-side">' +
         '<section class="status-panel"><div class="status-panel-head"><h3>100 km进度</h3><span>' + (km >= 100 ? "READY" : (100 - km).toFixed(1) + " KM TO GO") + '</span></div><div class="mini-progress"><i style="width:' + Math.min(100, km) + '%"></i></div><div class="metric-row"><div><span>核心</span><strong>' + data.trip.coreCertificateKm + '</strong></div><div><span>认证</span><strong>' + km.toFixed(1) + '</strong></div><div><span>盖章</span><strong>' + stamps.checked + "/" + stamps.total + "</strong></div></div></section>" +
         '<section class="status-panel"><div class="status-panel-head"><h3>出发前确认</h3><span>' + checkedConfirmations + "/" + confirmations.length + "</span></div>" + renderConfirmationRows(confirmations) + "</section>" +
+        renderTodayExpensePanel(day.id) +
         '<section class="status-panel"><div class="status-panel-head"><h3>当天打卡</h3><span>' + checkedPlaces + "/" + checkins.length + '</span></div><div class="data-actions"><button class="secondary-button" type="button" data-view-target="checkins">' + icon("map-pin-check.svg") + '查看地点</button><button class="secondary-button" type="button" data-open-checkin>' + icon("plus.svg") + '新增</button></div></section>' +
       "</aside></div>";
   }
@@ -455,6 +519,36 @@
     return '<article class="flight-card"><div class="flight-card-top"><span>' + htmlEscape(flight.direction + " · " + flight.date) + '</span><strong>' + htmlEscape(flight.number) + '</strong></div><div class="flight-route"><b>' + htmlEscape(flight.from) + "</b><i></i><b>" + htmlEscape(flight.to) + '</b></div><p class="flight-time"><strong>' + htmlEscape(flight.depart) + "</strong> → " + htmlEscape(flight.arrive) + '</p><p class="flight-note">' + htmlEscape(flight.airline + " · " + flight.note) + "</p></article>";
   }
 
+  function renderExpenseRow(expense) {
+    const category = EXPENSE_CATEGORIES[expense.category];
+    const day = dayById(expense.dayId);
+    return '<article class="expense-row" data-expense-row="' + htmlEscape(expense.id) + '"><span class="expense-category-mark">' + icon(category.icon) + '</span><div class="expense-copy"><h3>' + htmlEscape(expense.title) + '</h3><p>' + htmlEscape(day.date + " · " + category.label + " · " + EXPENSE_PAYMENTS[expense.payment]) + '</p>' + (expense.note ? '<small>' + htmlEscape(expense.note) + "</small>" : "") + '</div><strong class="expense-amount">' + formatMoney(expense.amount, expense.currency) + '</strong><div class="expense-actions"><button type="button" data-edit-expense="' + htmlEscape(expense.id) + '" aria-label="编辑' + htmlEscape(expense.title) + '" title="编辑">' + icon("pencil.svg") + '</button><button class="delete-action" type="button" data-delete-expense="' + htmlEscape(expense.id) + '" aria-label="删除' + htmlEscape(expense.title) + '" title="删除">' + icon("trash-2.svg") + "</button></div></article>";
+  }
+
+  function renderExpenseLedger() {
+    const allTotals = expenseTotals(state.expenses);
+    const filtered = state.expenses.filter(function (expense) {
+      return expenseDayFilter === "all" || expense.dayId === expenseDayFilter;
+    }).sort(function (a, b) {
+      const dayDifference = DAY_IDS.indexOf(b.dayId) - DAY_IDS.indexOf(a.dayId);
+      return dayDifference || String(b.createdAt).localeCompare(String(a.createdAt));
+    });
+    const filterButtons = [{ id: "all", label: "全部" }].concat(data.days.map(function (day) {
+      return { id: day.id, label: day.date.replace("月", "/").replace("日", "") };
+    })).map(function (option) {
+      return '<button type="button" class="expense-filter" data-expense-filter="' + option.id + '" aria-pressed="' + (expenseDayFilter === option.id) + '">' + htmlEscape(option.label) + "</button>";
+    }).join("");
+    const breakdown = Object.keys(EXPENSE_CATEGORIES).map(function (key) {
+      const categoryItems = filtered.filter(function (expense) { return expense.category === key; });
+      if (!categoryItems.length) return "";
+      const totals = expenseTotals(categoryItems);
+      const amountText = [totals.KRW ? formatMoney(totals.KRW, "KRW") : "", totals.CNY ? formatMoney(totals.CNY, "CNY") : ""].filter(Boolean).join(" · ");
+      return '<span class="expense-breakdown-item">' + icon(EXPENSE_CATEGORIES[key].icon) + '<b>' + htmlEscape(EXPENSE_CATEGORIES[key].label) + '</b><small>' + htmlEscape(amountText) + "</small></span>";
+    }).join("");
+
+    return '<section class="more-section span-2 expense-ledger"><div class="more-section-head"><div>' + icon("wallet-cards.svg") + '<h2>旅行账本</h2></div><span class="type-tag">' + allTotals.count + ' 笔</span></div><div class="expense-total-grid"><div><span>韩元支出</span><strong>' + formatMoney(allTotals.KRW, "KRW") + '</strong></div><div><span>人民币支出</span><strong>' + formatMoney(allTotals.CNY, "CNY") + '</strong></div><button class="primary-button" type="button" data-open-expense>' + icon("plus.svg") + '记一笔</button></div><div class="expense-filter-row" aria-label="按日期筛选支出">' + filterButtons + '</div>' + (breakdown ? '<div class="expense-breakdown">' + breakdown + "</div>" : "") + '<div class="expense-list">' + (filtered.length ? filtered.map(renderExpenseRow).join("") : '<div class="expense-empty">' + icon("receipt-text.svg") + "<p>还没有记录支出</p></div>") + "</div></section>";
+  }
+
   function renderMore() {
     const km = completedKm();
     const allConfirmations = data.confirmations;
@@ -471,6 +565,7 @@
 
     document.getElementById("more-content").innerHTML =
       '<div class="more-grid">' +
+        renderExpenseLedger() +
         '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("plane.svg") + '<h2>航班</h2></div><span class="type-tag">以订单为准</span></div><div class="flight-pair">' + data.flights.map(renderFlightCard).join("") + "</div></section>" +
         '<section class="more-section"><div class="more-section-head"><div>' + icon("award.svg") + '<h2>100 km证书</h2></div><span class="type-tag walk">' + (km >= 100 ? "READY" : km.toFixed(1) + " KM") + '</span></div><div class="certificate-callout"><strong>9月28日 13:00</strong><p>加波岛返港后，在11号线官方服务点办理。</p></div><ul class="fact-list"><li><span>受理时间</span><strong>09:00–11:30<br>13:00–16:30</strong></li><li><span>核心认证里程</span><strong>102.1 km</strong></li><li><span>必须携带</span><strong>本人纸质护照</strong></li><li><span>现场步骤</span><strong>QR问卷 + 验章</strong></li></ul>' + mapLinks(hamo, "步行") + "</section>" +
         '<section class="more-section"><div class="more-section-head"><div>' + icon("briefcase.svg") + '<h2>行李与船班确认</h2></div><span class="type-tag">' + confirmed + "/" + allConfirmations.length + "</span></div>" + renderConfirmationRows(allConfirmations) + "</section>" +
@@ -479,7 +574,7 @@
         }).join("") + "</div></section>" +
         '<section class="more-section"><div class="more-section-head"><div>' + icon("settings-2.svg") + '<h2>显示与安装</h2></div></div><div class="settings-list"><label class="setting-row"><span>紧凑显示</span><span class="toggle"><input id="compact-toggle" type="checkbox" ' + (state.compact ? "checked" : "") + '><i></i></span></label><div class="setting-row"><span>安装到手机桌面</span><button id="install-button" class="secondary-button" type="button" ' + (canInstall ? "" : "disabled") + ">" + icon("download.svg") + (canInstall ? "安装" : "由浏览器提供") + "</button></div></div></section>" +
         '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("notebook-pen.svg") + '<h2>全程备忘</h2></div><span class="type-tag">自动保存</span></div><textarea id="trip-notes" rows="6" placeholder="车票、天气、临时变更……">' + htmlEscape(state.notes) + "</textarea></section>" +
-        '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("database.svg") + '<h2>数据备份</h2></div><span class="type-tag">本机保存</span></div><p>导出文件包含打卡点、盖章和备注，可在另一台设备导入。</p><div class="data-actions"><button id="export-button" class="secondary-button" type="button">' + icon("download.svg") + '导出备份</button><button id="import-button" class="secondary-button" type="button">' + icon("upload.svg") + '导入备份</button>' + (hasRecovery ? '<button id="recovery-button" class="secondary-button" type="button">' + icon("history.svg") + "恢复导入前数据</button>" : "") + '<button id="reset-button" class="text-button danger-button" type="button">恢复默认</button></div></section>' +
+        '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("database.svg") + '<h2>数据备份</h2></div><span class="type-tag">本机保存</span></div><p>导出文件包含旅行支出、打卡点、盖章和备注，可在另一台设备导入。</p><div class="data-actions"><button id="export-button" class="secondary-button" type="button">' + icon("download.svg") + '导出备份</button><button id="import-button" class="secondary-button" type="button">' + icon("upload.svg") + '导入备份</button>' + (hasRecovery ? '<button id="recovery-button" class="secondary-button" type="button">' + icon("history.svg") + "恢复导入前数据</button>" : "") + '<button id="reset-button" class="text-button danger-button" type="button">恢复默认</button></div></section>' +
       "</div>";
   }
 
@@ -530,6 +625,50 @@
     document.getElementById("checkin-day").innerHTML = data.days.map(function (day) {
       return '<option value="' + day.id + '">' + htmlEscape(day.date + " · " + day.label) + "</option>";
     }).join("");
+  }
+
+  function populateExpenseDayOptions() {
+    document.getElementById("expense-day").innerHTML = data.days.map(function (day) {
+      return '<option value="' + day.id + '">' + htmlEscape(day.date + " · " + day.label) + "</option>";
+    }).join("");
+  }
+
+  function openQuickAddDialog() {
+    document.getElementById("quick-add-dialog").showModal();
+  }
+
+  function closeQuickAddDialog() {
+    document.getElementById("quick-add-dialog").close();
+  }
+
+  function resetExpenseForm() {
+    const form = document.getElementById("expense-form");
+    form.reset();
+    document.getElementById("expense-id").value = "";
+    document.getElementById("expense-day").value = state.activeDay;
+    document.getElementById("expense-form-title").textContent = "记一笔";
+    document.getElementById("expense-form-error").textContent = "";
+  }
+
+  function openExpenseDialog(item) {
+    resetExpenseForm();
+    if (item) {
+      document.getElementById("expense-id").value = item.id;
+      document.getElementById("expense-title").value = item.title;
+      document.getElementById("expense-amount").value = item.amount;
+      document.getElementById("expense-day").value = item.dayId;
+      document.getElementById("expense-payment").value = item.payment;
+      document.getElementById("expense-note").value = item.note || "";
+      document.querySelector('input[name="expenseCategory"][value="' + item.category + '"]').checked = true;
+      document.querySelector('input[name="currency"][value="' + item.currency + '"]').checked = true;
+      document.getElementById("expense-form-title").textContent = "编辑支出";
+    }
+    document.getElementById("expense-dialog").showModal();
+    window.setTimeout(function () { document.getElementById("expense-title").focus(); }, 80);
+  }
+
+  function closeExpenseDialog() {
+    document.getElementById("expense-dialog").close();
   }
 
   function resetCheckinForm() {
@@ -742,6 +881,75 @@
     showToast("打卡点已恢复");
   }
 
+  function submitExpenseForm(event) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const title = cleanText(formData.get("title"), 120).trim();
+    const dayId = cleanText(formData.get("dayId"), 10);
+    const currency = cleanText(formData.get("currency"), 5);
+    const amountText = cleanText(formData.get("amount"), 40).replace(/[,\s]/g, "");
+    const amount = Number(amountText);
+    const error = document.getElementById("expense-form-error");
+    if (!title || !DAY_IDS.includes(dayId)) {
+      error.textContent = "请填写项目并选择日期。";
+      return;
+    }
+    const amountPattern = currency === "KRW" ? /^\d+$/ : /^\d+(?:\.\d{1,2})?$/;
+    if (!amountPattern.test(amountText) || !Number.isFinite(amount) || amount <= 0) {
+      error.textContent = currency === "KRW" ? "韩元请输入大于0的整数。" : "人民币请输入大于0的金额，最多两位小数。";
+      return;
+    }
+    const existingId = document.getElementById("expense-id").value;
+    const existing = state.expenses.find(function (expense) { return expense.id === existingId; });
+    const expense = sanitizeExpense({
+      id: existingId || createId(),
+      title,
+      dayId,
+      amount,
+      currency,
+      category: formData.get("expenseCategory"),
+      payment: formData.get("payment"),
+      note: formData.get("note"),
+      createdAt: existing ? existing.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    if (!expense) {
+      error.textContent = "金额过大或内容无效，请检查后重试。";
+      return;
+    }
+    if (existing) {
+      state.expenses = state.expenses.map(function (current) { return current.id === expense.id ? expense : current; });
+    } else {
+      state.expenses.push(expense);
+    }
+    state.activeDay = expense.dayId;
+    expenseDayFilter = expense.dayId;
+    saveState();
+    closeExpenseDialog();
+    switchView("more");
+    showToast(existing ? "支出已更新" : "支出已记录");
+  }
+
+  function deleteExpense(id) {
+    const index = state.expenses.findIndex(function (expense) { return expense.id === id; });
+    if (index < 0) return;
+    const expense = state.expenses[index];
+    deletedExpense = { item: expense, index };
+    state.expenses.splice(index, 1);
+    saveState();
+    renderAll();
+    showToast("已删除“" + expense.title + "”", "撤销", "undo-expense");
+  }
+
+  function undoExpenseDelete() {
+    if (!deletedExpense) return;
+    state.expenses.splice(deletedExpense.index, 0, deletedExpense.item);
+    deletedExpense = null;
+    saveState();
+    renderAll();
+    showToast("支出已恢复");
+  }
+
   async function exportBackup() {
     const payload = {
       product: "jeju-olle-trip",
@@ -782,6 +990,8 @@
       else throw new Error("不支持的备份版本");
       localStorage.setItem(RECOVERY_KEY, JSON.stringify(state));
       state = nextState;
+      deletedCheckin = null;
+      deletedExpense = null;
       saveState();
       renderAll();
       showToast("备份已导入");
@@ -796,6 +1006,8 @@
     try {
       const recovery = JSON.parse(localStorage.getItem(RECOVERY_KEY));
       state = normalizeState(recovery);
+      deletedCheckin = null;
+      deletedExpense = null;
       saveState();
       localStorage.removeItem(RECOVERY_KEY);
       renderAll();
@@ -806,8 +1018,10 @@
   }
 
   function resetState() {
-    if (!window.confirm("确认清除新增地点、盖章、确认项和备注，恢复默认行程？")) return;
+    if (!window.confirm("确认清除新增地点、旅行支出、盖章、确认项和备注，恢复默认行程？")) return;
     state = defaultState();
+    deletedCheckin = null;
+    deletedExpense = null;
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(RECOVERY_KEY);
     saveState();
@@ -890,12 +1104,38 @@
         selectDay(dayButton.dataset.day);
         return;
       }
+      if (event.target.closest("[data-open-quick-add]")) {
+        openQuickAddDialog();
+        return;
+      }
+      if (event.target.closest("[data-close-quick-add]")) {
+        closeQuickAddDialog();
+        return;
+      }
+      if (event.target.closest("[data-quick-checkin]")) {
+        closeQuickAddDialog();
+        openCheckinDialog();
+        return;
+      }
+      if (event.target.closest("[data-quick-expense]")) {
+        closeQuickAddDialog();
+        openExpenseDialog();
+        return;
+      }
       if (event.target.closest("[data-open-checkin]")) {
         openCheckinDialog();
         return;
       }
       if (event.target.closest("[data-close-checkin]")) {
         closeCheckinDialog();
+        return;
+      }
+      if (event.target.closest("[data-open-expense]")) {
+        openExpenseDialog();
+        return;
+      }
+      if (event.target.closest("[data-close-expense]")) {
+        closeExpenseDialog();
         return;
       }
       const toggleCheckin = event.target.closest("[data-toggle-checkin]");
@@ -917,6 +1157,23 @@
         deleteCheckin(deleteButton.dataset.deleteCheckin);
         return;
       }
+      const editExpense = event.target.closest("[data-edit-expense]");
+      if (editExpense) {
+        const expense = state.expenses.find(function (current) { return current.id === editExpense.dataset.editExpense; });
+        if (expense) openExpenseDialog(expense);
+        return;
+      }
+      const deleteExpenseButton = event.target.closest("[data-delete-expense]");
+      if (deleteExpenseButton) {
+        deleteExpense(deleteExpenseButton.dataset.deleteExpense);
+        return;
+      }
+      const expenseFilter = event.target.closest("[data-expense-filter]");
+      if (expenseFilter) {
+        expenseDayFilter = expenseFilter.dataset.expenseFilter;
+        renderMore();
+        return;
+      }
       const dayFilter = event.target.closest("[data-filter-day]");
       if (dayFilter) {
         filterState.day = dayFilter.dataset.filterDay;
@@ -932,6 +1189,10 @@
       const toastAction = event.target.closest("[data-toast-action]");
       if (toastAction && toastAction.dataset.toastAction === "undo-delete") {
         undoDelete();
+        return;
+      }
+      if (toastAction && toastAction.dataset.toastAction === "undo-expense") {
+        undoExpenseDelete();
         return;
       }
       if (event.target.closest("#parse-location")) {
@@ -1007,6 +1268,13 @@
     });
 
     document.getElementById("checkin-form").addEventListener("submit", submitCheckinForm);
+    document.getElementById("expense-form").addEventListener("submit", submitExpenseForm);
+    document.getElementById("quick-add-dialog").addEventListener("click", function (event) {
+      if (event.target === event.currentTarget) closeQuickAddDialog();
+    });
+    document.getElementById("expense-dialog").addEventListener("click", function (event) {
+      if (event.target === event.currentTarget) closeExpenseDialog();
+    });
     document.getElementById("checkin-dialog").addEventListener("click", function (event) {
       if (event.target === event.currentTarget) closeCheckinDialog();
     });
@@ -1031,6 +1299,7 @@
   }
 
   populateCheckinDayOptions();
+  populateExpenseDayOptions();
   bindEvents();
   configurePrint();
   initializeInstall();

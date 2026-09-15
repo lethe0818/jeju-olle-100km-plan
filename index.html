@@ -77,10 +77,63 @@
   <nav class="app-dock" aria-label="主导航">
     <button type="button" data-view-target="today" aria-current="page"><img src="assets/icons/house.svg" alt=""><span>今日</span></button>
     <button type="button" data-view-target="plan"><img src="assets/icons/calendar-days.svg" alt=""><span>计划</span></button>
-    <button class="dock-add" type="button" data-open-checkin aria-label="新增打卡点"><span><img src="assets/icons/plus.svg" alt=""></span><small>新增</small></button>
+    <button class="dock-add" type="button" data-open-quick-add aria-label="快速新增"><span><img src="assets/icons/plus.svg" alt=""></span><small>新增</small></button>
     <button type="button" data-view-target="checkins"><img src="assets/icons/map-pin-check.svg" alt=""><span>打卡</span></button>
     <button type="button" data-view-target="more"><img src="assets/icons/ellipsis.svg" alt=""><span>更多</span></button>
   </nav>
+
+  <dialog id="quick-add-dialog" class="bottom-sheet quick-add-sheet" aria-labelledby="quick-add-title">
+    <section class="quick-add-content">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="sheet-header">
+        <div><p class="overline">QUICK ADD</p><h2 id="quick-add-title">新增</h2></div>
+        <button class="icon-button" type="button" data-close-quick-add aria-label="关闭"><img src="assets/icons/x.svg" alt=""></button>
+      </header>
+      <div class="quick-add-options">
+        <button type="button" data-quick-checkin><span><img src="assets/icons/map-pin-check.svg" alt=""></span><b>打卡点</b><small>美食、景点或购物</small></button>
+        <button type="button" data-quick-expense><span><img src="assets/icons/receipt-text.svg" alt=""></span><b>记一笔</b><small>记录旅行花销</small></button>
+      </div>
+    </section>
+  </dialog>
+
+  <dialog id="expense-dialog" class="bottom-sheet expense-sheet" aria-labelledby="expense-form-title">
+    <form id="expense-form" method="dialog" novalidate>
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <header class="sheet-header">
+        <div><p class="overline">TRIP EXPENSE</p><h2 id="expense-form-title">记一笔</h2></div>
+        <button class="icon-button" type="button" data-close-expense aria-label="关闭"><img src="assets/icons/x.svg" alt=""></button>
+      </header>
+      <input id="expense-id" type="hidden">
+
+      <fieldset class="category-picker expense-category-picker">
+        <legend>支出分类</legend>
+        <label><input type="radio" name="expenseCategory" value="transport" checked><span><img src="assets/icons/navigation.svg" alt="">交通</span></label>
+        <label><input type="radio" name="expenseCategory" value="food"><span><img src="assets/icons/utensils.svg" alt="">餐饮</span></label>
+        <label><input type="radio" name="expenseCategory" value="stay"><span><img src="assets/icons/house.svg" alt="">住宿</span></label>
+        <label><input type="radio" name="expenseCategory" value="ticket"><span><img src="assets/icons/bookmark.svg" alt="">门票</span></label>
+        <label><input type="radio" name="expenseCategory" value="shopping"><span><img src="assets/icons/shopping-bag.svg" alt="">购物</span></label>
+        <label><input type="radio" name="expenseCategory" value="other"><span><img src="assets/icons/ellipsis.svg" alt="">其他</span></label>
+      </fieldset>
+
+      <div class="form-grid">
+        <label class="field span-2"><span>项目 <b>*</b></span><input id="expense-title" name="title" required maxlength="120" autocomplete="off" placeholder="例如：机场到酒店出租车"></label>
+        <label class="field"><span>金额 <b>*</b></span><input id="expense-amount" name="amount" required inputmode="decimal" autocomplete="off" placeholder="0"></label>
+        <fieldset class="currency-picker">
+          <legend>币种</legend>
+          <label><input type="radio" name="currency" value="KRW" checked><span>₩ 韩元</span></label>
+          <label><input type="radio" name="currency" value="CNY"><span>¥ 人民币</span></label>
+        </fieldset>
+        <label class="field"><span>日期 <b>*</b></span><select id="expense-day" name="dayId" required></select></label>
+        <label class="field"><span>付款方式</span><select id="expense-payment" name="payment"><option value="card">银行卡</option><option value="cash">现金</option><option value="alipay">支付宝</option><option value="wechat">微信</option><option value="other">其他</option></select></label>
+        <label class="field span-2"><span>备注</span><textarea id="expense-note" name="note" rows="3" maxlength="500" placeholder="同行分摊、票据或其他说明"></textarea></label>
+      </div>
+      <p id="expense-form-error" class="form-error" role="alert"></p>
+      <footer class="sheet-actions">
+        <button class="text-button" type="button" data-close-expense>取消</button>
+        <button class="primary-button" type="submit">保存支出</button>
+      </footer>
+    </form>
+  </dialog>
 
   <dialog id="checkin-dialog" class="bottom-sheet" aria-labelledby="checkin-form-title">
     <form id="checkin-form" method="dialog" novalidate>
