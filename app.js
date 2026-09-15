@@ -2,9 +2,10 @@
   "use strict";
 
   const data = window.TRIP_DATA;
-  const STORAGE_KEY = "jeju-olle-plan-v4";
+  const STORAGE_KEY = "jeju-olle-plan-v5";
+  const LEGACY_V4_STORAGE_KEY = "jeju-olle-plan-v4";
   const LEGACY_STORAGE_KEY = "jeju-olle-plan-v3";
-  const RECOVERY_KEY = "jeju-olle-plan-v4-recovery";
+  const RECOVERY_KEY = "jeju-olle-plan-v5-recovery";
   const WEATHER_CACHE_KEY = "jeju-olle-weather-v1";
   const WEATHER_REFRESH_MS = 25 * 60 * 1000;
   const WEATHER_REGIONS = {
@@ -38,22 +39,28 @@
   let deletedExpense = null;
   let toastTimer = null;
   let printRestore = null;
+  let executionLocation = null;
+  let executionLocationError = "";
+  let executionLocationPending = false;
+  let executionLocationRequestId = 0;
+  let executionTimelineOpen = false;
   const openRouteDetails = new Set();
   const weatherCache = loadWeatherCache();
   const weatherPending = new Set();
   const weatherErrors = {};
 
   function initialDayId() {
-    const now = new Date();
-    const key = String(now.getMonth() + 1).padStart(2, "0") + String(now.getDate()).padStart(2, "0");
-    if (now.getFullYear() !== 2026 || key < "0923") return "0923";
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+    const now = Object.fromEntries(parts.map(function (part) { return [part.type, part.value]; }));
+    const key = now.month + now.day;
+    if (now.year !== "2026" || key < "0923") return "0923";
     if (key > "0928") return "0928";
     return DAY_IDS.includes(key) ? key : "0923";
   }
 
   function defaultState() {
     return {
-      version: 4,
+      version: 5,
       activeView: "today",
       activeDay: initialDayId(),
       compact: false,
@@ -64,7 +71,8 @@
       customCheckins: [],
       expenses: [],
       confirmations: {},
-      fallbacks: {}
+      fallbacks: {},
+      executions: {}
     };
   }
 
@@ -138,11 +146,35 @@
     };
   }
 
+  function sanitizeExecutions(raw) {
+    const executions = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return executions;
+    DAY_IDS.forEach(function (dayId) {
+      const source = raw[dayId];
+      if (!source || typeof source !== "object" || Array.isArray(source)) return;
+      const day = dayById(dayId);
+      const stepIds = day.timeline.map(function (item) { return item.id; });
+      const stepStates = {};
+      const sourceSteps = source.stepStates && typeof source.stepStates === "object" && !Array.isArray(source.stepStates) ? source.stepStates : {};
+      Object.entries(sourceSteps).forEach(function (entry) {
+        if (stepIds.includes(entry[0]) && entry[1] && entry[1].done === true) stepStates[entry[0]] = { done: true };
+      });
+      executions[dayId] = {
+        status: ["not-started", "active", "finished"].includes(source.status) ? source.status : "not-started",
+        activeStepId: stepIds.includes(source.activeStepId) ? source.activeStepId : "",
+        stepStates,
+        startedAt: cleanText(source.startedAt, 40),
+        finishedAt: cleanText(source.finishedAt, 40)
+      };
+    });
+    return executions;
+  }
+
   function normalizeState(raw) {
     const defaults = defaultState();
     if (!raw || typeof raw !== "object") return defaults;
     return {
-      version: 4,
+      version: 5,
       activeView: ALLOWED_VIEWS.includes(raw.activeView) ? raw.activeView : defaults.activeView,
       activeDay: DAY_IDS.includes(raw.activeDay) ? raw.activeDay : defaults.activeDay,
       compact: Boolean(raw.compact),
@@ -155,13 +187,18 @@
       customCheckins: Array.isArray(raw.customCheckins) ? raw.customCheckins.slice(0, 500).map(sanitizeCheckin).filter(Boolean) : [],
       expenses: Array.isArray(raw.expenses) ? raw.expenses.slice(0, 2000).map(sanitizeExpense).filter(Boolean) : [],
       confirmations: cleanBooleanMap(raw.confirmations, 100),
-      fallbacks: cleanBooleanMap(raw.fallbacks, 100)
+      fallbacks: cleanBooleanMap(raw.fallbacks, 100),
+      executions: sanitizeExecutions(raw.executions)
     };
+  }
+
+  function migrateV4(raw) {
+    return normalizeState(Object.assign({}, raw, { version: 5, executions: {} }));
   }
 
   function migrateLegacy(raw) {
     return normalizeState({
-      version: 4,
+      version: 5,
       activeView: "today",
       activeDay: raw.activeDay,
       compact: raw.compact,
@@ -172,15 +209,28 @@
       customCheckins: [],
       expenses: [],
       confirmations: {},
-      fallbacks: raw.fallbacks
+      fallbacks: raw.fallbacks,
+      executions: {}
     });
+  }
+
+  function readStoredState(key) {
+    const value = localStorage.getItem(key);
+    if (!value) return null;
+    try { return JSON.parse(value); } catch (error) { return null; }
   }
 
   function loadState() {
     try {
-      const current = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (current && current.version === 4) return normalizeState(current);
-      const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
+      const current = readStoredState(STORAGE_KEY);
+      if (current && current.version === 5) return normalizeState(current);
+      const version4 = readStoredState(LEGACY_V4_STORAGE_KEY);
+      if (version4 && version4.version === 4) {
+        const migrated = migrateV4(version4);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+        return migrated;
+      }
+      const legacy = readStoredState(LEGACY_STORAGE_KEY);
       if (legacy && legacy.version === 3) {
         const migrated = migrateLegacy(legacy);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
@@ -258,6 +308,19 @@
     if (offset < 0) message = "日期已过，不显示过期预报";
     else if (offset > 15) message = "尚未进入 16 天预报范围";
     else if (!cached) message = loading ? "正在获取沿途天气…" : (navigator.onLine ? (weatherErrors[dayId] ? "天气更新失败，请稍后重试" : "等待天气数据") : "离线中，暂无上次天气数据");
+    if (panel.classList.contains("execution-weather")) {
+      if (message) {
+        content.innerHTML = '<span class="execution-weather-copy">' + htmlEscape(message) + '</span>';
+      } else {
+        const forecast = cached.forecast;
+        const current = offset === 0 && Number.isFinite(forecast.currentTemp);
+        const temp = weatherNumber(current ? forecast.currentTemp : forecast.high, "°");
+        const weatherRisk = Number(forecast.rain) >= 60 ? "降雨风险高" : Number(forecast.gust) >= 45 ? "强风风险高" : "天气风险可控";
+        content.innerHTML = '<span class="execution-weather-copy"><strong>' + htmlEscape(weatherDescription(current ? forecast.currentCode : forecast.code)) + " " + temp + '</strong><span>雨 ' + weatherNumber(forecast.rain, "%") + " · 阵风 " + weatherNumber(forecast.gust, " km/h") + " · " + weatherRisk + '</span></span>';
+      }
+      content.innerHTML += ((dayId === "0924" || dayId === "0928") ? '<span class="execution-ferry-note">天气不代表船班运行状态</span>' : "");
+      return;
+    }
     if (message) {
       content.innerHTML = '<p class="weather-empty">' + message + '</p>';
     } else {
@@ -318,7 +381,10 @@
     }).finally(function () {
       window.clearTimeout(timeout);
       weatherPending.delete(dayId);
-      if (state.activeDay === dayId) renderWeather();
+      if (state.activeDay === dayId) {
+        if (state.activeView === "today" && executionForDay(dayId, false).status === "active") renderToday();
+        renderWeather();
+      }
     });
   }
 
@@ -446,6 +512,264 @@
     return { checked, total };
   }
 
+  function executionForDay(dayId, create) {
+    if (!state.executions[dayId] && create) {
+      state.executions[dayId] = {
+        status: "not-started",
+        activeStepId: "",
+        stepStates: {},
+        startedAt: "",
+        finishedAt: ""
+      };
+    }
+    return state.executions[dayId] || { status: "not-started", activeStepId: "", stepStates: {}, startedAt: "", finishedAt: "" };
+  }
+
+  function isStepDone(execution, stepId) {
+    return Boolean(execution.stepStates[stepId] && execution.stepStates[stepId].done);
+  }
+
+  function firstIncompleteStep(day, execution, startIndex) {
+    const start = Number.isInteger(startIndex) ? startIndex : 0;
+    return day.timeline.slice(start).find(function (item) { return !isStepDone(execution, item.id); }) || null;
+  }
+
+  function currentExecutionStep(day, execution) {
+    const selected = day.timeline.find(function (item) { return item.id === execution.activeStepId && !isStepDone(execution, item.id); });
+    return selected || firstIncompleteStep(day, execution);
+  }
+
+  function stampsForDay(day) {
+    const plans = day.stampPlan || day.routeIds.map(function (routeId) {
+      return { routeId, stamps: data.routes[routeId].stamps || ["start", "middle", "end"] };
+    });
+    return plans.flatMap(function (plan) {
+      return plan.stamps.map(function (stamp) { return plan.routeId + "-" + stamp; });
+    });
+  }
+
+  function syncExecutionFromStamps(day, execution) {
+    let changed = false;
+    day.timeline.forEach(function (item) {
+      if (!item.completionStamps || !item.completionStamps.length) return;
+      const complete = item.completionStamps.every(function (key) { return Boolean(state.stamps[key]); });
+      if (complete && !isStepDone(execution, item.id)) {
+        execution.stepStates[item.id] = { done: true };
+        changed = true;
+      } else if (!complete && isStepDone(execution, item.id)) {
+        delete execution.stepStates[item.id];
+        changed = true;
+      }
+    });
+    const active = day.timeline.find(function (item) { return item.id === execution.activeStepId; });
+    if (active && isStepDone(execution, active.id)) {
+      const index = day.timeline.indexOf(active);
+      const next = firstIncompleteStep(day, execution, index + 1) || firstIncompleteStep(day, execution);
+      execution.activeStepId = next ? next.id : "";
+      changed = true;
+    }
+    return changed;
+  }
+
+  function jejuNowParts() {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+    }).formatToParts(new Date());
+    return Object.fromEntries(parts.map(function (part) { return [part.type, part.value]; }));
+  }
+
+  function suggestedStep(day, execution) {
+    const now = jejuNowParts();
+    if (now.year !== "2026" || now.month + now.day !== day.id) return null;
+    const minutes = Number(now.hour) * 60 + Number(now.minute);
+    return day.timeline.filter(function (item) {
+      const time = item.time.split(":").map(Number);
+      return time[0] * 60 + time[1] <= minutes && !isStepDone(execution, item.id);
+    }).at(-1) || null;
+  }
+
+  function nextStamp(day) {
+    const labels = { start: "起点", middle: "中间", end: "终点" };
+    const plans = day.stampPlan || day.routeIds.map(function (routeId) {
+      return { routeId, stamps: data.routes[routeId].stamps || ["start", "middle", "end"] };
+    });
+    for (const plan of plans) {
+      for (const stamp of plan.stamps) {
+        const key = plan.routeId + "-" + stamp;
+        if (!state.stamps[key]) {
+          return { key, routeId: plan.routeId, stamp, label: labels[stamp], point: data.stampLocations[plan.routeId][stamp] };
+        }
+      }
+    }
+    return null;
+  }
+
+  function stampNavigationPlace(stamp) {
+    const nearby = stamp.point.place ? data.places[stamp.point.place] : null;
+    return nearby ? Object.assign({}, nearby, { name: stamp.point.korean + "章附近", korean: stamp.point.korean }) : {
+      name: stamp.point.korean + "章",
+      korean: stamp.point.korean,
+      address: "官方图：本线 " + stamp.point.km.toFixed(1) + " km 处；请沿现场偶来标识找盖章亭"
+    };
+  }
+
+  function distanceMeters(from, place) {
+    if (!from || !hasCoordinates(place)) return null;
+    const radians = function (degree) { return degree * Math.PI / 180; };
+    const lat1 = radians(from.lat);
+    const lat2 = radians(Number(place.lat));
+    const deltaLat = radians(Number(place.lat) - from.lat);
+    const deltaLng = radians(Number(place.lng) - from.lng);
+    const value = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+    return 6371000 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
+  }
+
+  function formatDistance(meters) {
+    if (!Number.isFinite(meters)) return "";
+    return meters < 1000 ? Math.round(meters) + " m" : (meters / 1000).toFixed(meters < 10000 ? 1 : 0) + " km";
+  }
+
+  function cutoffStatus(day) {
+    const cutoffs = day.cutoffs || [];
+    if (!cutoffs.length) return null;
+    const execution = executionForDay(day.id, false);
+    const selected = cutoffs.find(function (item) { return !isStepDone(execution, item.resolveStepId); });
+    if (!selected) return Object.assign({ tone: "normal", countdown: "已处理" }, cutoffs.at(-1));
+    const nowParts = jejuNowParts();
+    const selectedDate = "2026-" + day.id.slice(0, 2) + "-" + day.id.slice(2);
+    const currentDate = nowParts.year + "-" + nowParts.month + "-" + nowParts.day;
+    if (selectedDate !== currentDate) return Object.assign({ tone: "preview", countdown: "当地 " + selected.time }, selected);
+    const now = Date.now();
+    const deadline = new Date(selectedDate + "T" + selected.time + ":00+09:00").getTime();
+    const deltaMinutes = Math.ceil((deadline - now) / 60000);
+    if (deltaMinutes < 0) return Object.assign({ tone: "overdue", countdown: "已超时 " + Math.abs(deltaMinutes) + " 分" }, selected);
+    const countdown = deltaMinutes >= 60 ? "还剩 " + Math.floor(deltaMinutes / 60) + " 小时 " + deltaMinutes % 60 + " 分" : "还剩 " + deltaMinutes + " 分";
+    return Object.assign({ tone: deltaMinutes <= 60 ? "warning" : "normal", countdown }, selected);
+  }
+
+  function startExecution(dayId) {
+    if (state.activeDay !== dayId) clearExecutionLocation();
+    const day = dayById(dayId);
+    const execution = executionForDay(dayId, true);
+    syncExecutionFromStamps(day, execution);
+    const current = currentExecutionStep(day, execution);
+    execution.status = "active";
+    execution.activeStepId = current ? current.id : "";
+    execution.startedAt = execution.startedAt || new Date().toISOString();
+    execution.finishedAt = "";
+    state.activeView = "today";
+    state.activeDay = dayId;
+    saveState();
+    renderAll();
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  function completeExecutionStep(dayId) {
+    const day = dayById(dayId);
+    const execution = executionForDay(dayId, true);
+    const current = currentExecutionStep(day, execution);
+    if (!current) return;
+    const missing = (current.completionStamps || []).filter(function (key) { return !state.stamps[key]; });
+    if (missing.length) {
+      showToast("还缺 " + missing.length + " 枚关联章，盖齐后本步骤会自动完成");
+      return;
+    }
+    execution.stepStates[current.id] = { done: true };
+    const index = day.timeline.indexOf(current);
+    const next = firstIncompleteStep(day, execution, index + 1) || firstIncompleteStep(day, execution);
+    execution.activeStepId = next ? next.id : "";
+    saveState();
+    renderAll();
+    showToast(next ? "已进入下一步" : "全部步骤已完成，可以结束今日");
+  }
+
+  function returnToPreviousStep(dayId) {
+    const day = dayById(dayId);
+    const execution = executionForDay(dayId, true);
+    const current = currentExecutionStep(day, execution);
+    const currentIndex = current ? day.timeline.indexOf(current) : day.timeline.length;
+    if (currentIndex <= 0) {
+      showToast("已经是第一步");
+      return;
+    }
+    const previous = day.timeline[currentIndex - 1];
+    if (previous.completionStamps && previous.completionStamps.every(function (key) { return Boolean(state.stamps[key]); })) {
+      showToast("上一步关联章已盖齐，取消对应章点后才能撤销完成");
+      return;
+    }
+    delete execution.stepStates[previous.id];
+    execution.activeStepId = previous.id;
+    saveState();
+    renderAll();
+    showToast("已返回上一步");
+  }
+
+  function finishExecution(dayId) {
+    const day = dayById(dayId);
+    const execution = executionForDay(dayId, true);
+    const unfinishedSteps = day.timeline.filter(function (item) { return !isStepDone(execution, item.id); }).length;
+    const unstamped = stampsForDay(day).filter(function (key) { return !state.stamps[key]; }).length;
+    const message = "结束今日？还有 " + unfinishedSteps + " 个步骤未完成、" + unstamped + " 枚章未盖。进度会保留，可随时重新打开。";
+    if (!window.confirm(message)) return;
+    execution.status = "finished";
+    execution.finishedAt = new Date().toISOString();
+    saveState();
+    renderAll();
+    showToast("今日执行已结束");
+  }
+
+  function chooseSuggestedStep(dayId, stepId) {
+    const day = dayById(dayId);
+    if (!day.timeline.some(function (item) { return item.id === stepId; })) return;
+    const execution = executionForDay(dayId, true);
+    execution.activeStepId = stepId;
+    saveState();
+    renderAll();
+    showToast("已定位到计划建议步骤，未改动完成状态");
+  }
+
+  function clearExecutionLocation() {
+    executionLocationRequestId += 1;
+    executionLocation = null;
+    executionLocationError = "";
+    executionLocationPending = false;
+  }
+
+  function updateExecutionLocation() {
+    if (!("geolocation" in navigator)) {
+      executionLocationError = "此浏览器不支持定位";
+      renderToday();
+      renderWeather();
+      return;
+    }
+    executionLocationPending = true;
+    executionLocationError = "";
+    const requestId = ++executionLocationRequestId;
+    renderToday();
+    renderWeather();
+    navigator.geolocation.getCurrentPosition(function (position) {
+      if (requestId !== executionLocationRequestId) return;
+      if (isValidCoordinate(position.coords.latitude, position.coords.longitude)) {
+        executionLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: Number.isFinite(position.coords.accuracy) ? position.coords.accuracy : null,
+          updatedAt: Date.now()
+        };
+      } else executionLocationError = "位置坐标无效，请重试";
+      executionLocationPending = false;
+      renderToday();
+      renderWeather();
+    }, function (error) {
+      if (requestId !== executionLocationRequestId) return;
+      executionLocationPending = false;
+      executionLocationError = error.code === 1 ? "定位权限被拒绝" : error.code === 3 ? "定位超时，请重试" : "暂时无法取得位置";
+      renderToday();
+      renderWeather();
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+  }
+
   function checkinsForDay(dayId) {
     const defaults = data.defaultCheckins.filter(function (item) { return item.dayId === dayId; }).map(function (item) {
       return Object.assign({ custom: false }, item);
@@ -519,6 +843,72 @@
     return '<section class="next-card"><div class="next-card-top"><div><span class="next-label">NEXT ACTION</span><time>' + htmlEscape(day.next.time) + '</time></div><span class="mode-badge">' + htmlEscape(day.next.mode) + '</span></div><h3>' + htmlEscape(day.next.title) + "</h3><p>" + htmlEscape(day.next.detail) + "</p>" + (place ? mapLinks(place, day.next.mode) : "") + "</section>";
   }
 
+  function renderExecutionLauncher(day, execution) {
+    const done = day.timeline.filter(function (item) { return isStepDone(execution, item.id); }).length;
+    if (execution.status === "finished") {
+      return '<section class="execution-launcher finished"><div><span class="execution-kicker">DAY CLOSED</span><h3>今日执行已结束</h3><p>完成 ' + done + " / " + day.timeline.length + ' 个步骤，进度和章点均已保存。</p></div><button class="primary-button" type="button" data-reopen-execution="' + day.id + '">重新打开</button></section>';
+    }
+    return '<section class="execution-launcher"><div><span class="execution-kicker">WALK MODE</span><h3>' + (done ? "继续今天的执行" : "准备出发") + '</h3><p>' + day.timeline.length + " 个节点 · " + stampsForDay(day).length + " 枚章 · " + (day.cutoffs || []).length + ' 条截止</p></div><button class="primary-button" type="button" data-start-execution="' + day.id + '">' + icon("navigation.svg") + (done ? "继续此日" : "开始此日") + "</button></section>";
+  }
+
+  function renderExecutionCutoff(day) {
+    const cutoff = cutoffStatus(day);
+    if (!cutoff) return "";
+    return '<section class="execution-cutoff ' + cutoff.tone + '" data-cutoff-id="' + cutoff.id + '"><div><span>硬截止 · ' + htmlEscape(cutoff.time) + '</span><strong>' + htmlEscape(cutoff.title) + '</strong></div><b>' + htmlEscape(cutoff.countdown) + '</b><p>' + htmlEscape(cutoff.action) + "</p></section>";
+  }
+
+  function renderExecutionStatus(day) {
+    const cutoff = cutoffStatus(day);
+    const cached = weatherCache[day.id];
+    const forecast = cached && cached.forecast;
+    const weather = forecast ? weatherDescription(forecast.code) + " · 雨 " + weatherNumber(forecast.rain, "%") + " · 风 " + weatherNumber(forecast.gust, " km/h") : "天气待更新";
+    return '<div class="execution-statusbar"><div class="' + (cutoff ? cutoff.tone : "normal") + '"><span>硬截止</span><strong>' + (cutoff ? htmlEscape(cutoff.time + " · " + cutoff.countdown) : "无") + '</strong></div><div><span>沿途天气</span><strong>' + htmlEscape(weather) + '</strong></div></div>';
+  }
+
+  function renderExecutionStamp(day) {
+    const stamp = nextStamp(day);
+    if (!stamp) {
+      return '<section class="execution-stamp complete"><div class="execution-section-label">' + icon("award.svg") + '<span>下一枚章</span></div><h3>当天章点已全部完成</h3><p>检查纸质护照上的印迹是否清晰。</p></section>';
+    }
+    const place = stampNavigationPlace(stamp);
+    const officialImage = "https://contents.ollepass.org/static/homepage/trail/img/road/" + data.stampLocations[stamp.routeId].map;
+    const distance = executionLocation ? distanceMeters(executionLocation, place) : null;
+    let locationCopy;
+    if (!hasCoordinates(place)) locationCopy = "章亭精确坐标未核实，不计算距离";
+    else if (executionLocationPending) locationCopy = "正在获取当前位置…";
+    else if (executionLocationError) locationCopy = executionLocationError;
+    else if (Number.isFinite(distance)) locationCopy = "直线约 " + formatDistance(distance) + " · " + (Number.isFinite(executionLocation.accuracy) ? "精度 ±" + Math.round(executionLocation.accuracy) + " m" + (executionLocation.accuracy > 100 ? "（低精度）" : "") : "精度未知") + " · " + new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(executionLocation.updatedAt)) + " 更新";
+    else locationCopy = "点击后仅申请一次位置权限";
+    return '<section class="execution-stamp"><div class="execution-section-label">' + icon("award.svg") + '<span>下一枚章</span><a href="' + htmlEscape(officialImage) + '" target="_blank" rel="noopener">官方章点图</a></div><div class="execution-stamp-head"><div><span>' + htmlEscape(stamp.routeId) + '号线 · ' + htmlEscape(stamp.label) + '章</span><h3 lang="ko">' + htmlEscape(stamp.point.korean) + '</h3></div><strong>' + stamp.point.km.toFixed(1) + '<small>KM</small></strong></div><p>' + htmlEscape(stamp.point.note || "按官方路线图和现场偶来标识寻找章亭。") + '</p><div class="execution-location"><span>' + htmlEscape(locationCopy) + '</span>' + (hasCoordinates(place) ? '<button type="button" data-update-execution-location ' + (executionLocationPending ? "disabled" : "") + '>' + icon("navigation.svg") + "更新位置</button>" : "") + '</div><div class="execution-stamp-actions">' + mapLinks(place, "步行", true) + '<label class="execution-stamp-check"><input type="checkbox" data-stamp="' + stamp.key + '" aria-label="' + htmlEscape(stamp.routeId + "号线" + stamp.label + "章已盖") + '"><span>' + icon("check.svg") + "已盖好</span></label></div></section>";
+  }
+
+  function renderExecutionCurrent(day, execution) {
+    const current = currentExecutionStep(day, execution);
+    const doneCount = day.timeline.filter(function (item) { return isStepDone(execution, item.id); }).length;
+    if (!current) {
+      return '<section class="execution-current all-done"><div class="execution-section-label">' + icon("check.svg") + '<span>全部步骤</span></div><h2>今天的计划已完成</h2><p>确认纸质章印清晰后结束今日。</p><button class="primary-button" type="button" data-finish-execution="' + day.id + '">结束今日</button></section>';
+    }
+    const place = current.place ? data.places[current.place] : null;
+    const currentIndex = day.timeline.indexOf(current);
+    const suggestion = suggestedStep(day, execution);
+    const missing = (current.completionStamps || []).filter(function (key) { return !state.stamps[key]; });
+    return '<section class="execution-current"><div class="execution-current-top"><div><span class="execution-kicker">CURRENT STEP · ' + (doneCount + 1) + "/" + day.timeline.length + '</span><time>' + htmlEscape(current.time) + '</time></div><span class="mode-badge">' + htmlEscape(current.type) + '</span></div><h2>' + htmlEscape(current.title) + '</h2><p>' + htmlEscape(current.detail) + '</p>' + (place ? '<div class="execution-place"><b lang="ko">' + htmlEscape(place.korean) + '</b><span>' + htmlEscape(place.address) + '</span></div>' + mapLinks(place, current.type + " " + current.title) : "") + (missing.length ? '<p class="execution-stamp-lock">' + icon("award.svg") + "盖齐关联的 " + missing.length + " 枚章后自动完成此步骤</p>" : "") + '<div class="execution-controls"><button class="secondary-button" type="button" data-previous-step="' + day.id + '" ' + (currentIndex === 0 ? "disabled" : "") + '>返回上一步</button><button class="primary-button" type="button" data-complete-step="' + day.id + '">' + icon("check.svg") + '完成并继续</button></div>' + (suggestion && suggestion.id !== current.id ? '<div class="execution-suggestion"><span>按济州时间，计划建议在</span><button type="button" data-suggested-step="' + suggestion.id + '" data-execution-day="' + day.id + '">' + htmlEscape(suggestion.time + " · " + suggestion.title) + '</button><small>仅建议，不会自动更改进度</small></div>' : "") + "</section>";
+  }
+
+  function renderExecutionTimeline(day, execution) {
+    const done = day.timeline.filter(function (item) { return isStepDone(execution, item.id); }).length;
+    return '<details class="execution-timeline" data-execution-timeline ' + (executionTimelineOpen ? "open" : "") + '><summary><span>' + icon("calendar-days.svg") + '完整时间轴</span><small>' + done + " / " + day.timeline.length + " 已完成 " + icon("chevron-down.svg") + '</small></summary><div class="execution-timeline-list">' + day.timeline.map(function (item) {
+      const itemDone = isStepDone(execution, item.id);
+      const active = item.id === execution.activeStepId;
+      return '<article class="execution-timeline-item ' + (itemDone ? "done" : "") + (active ? " active" : "") + '"><time>' + htmlEscape(item.time) + '</time><div><h3>' + htmlEscape(item.title) + '</h3><p>' + htmlEscape(item.detail) + '</p></div><span>' + (itemDone ? icon("check.svg") : "") + "</span></article>";
+    }).join("") + "</div></details>";
+  }
+
+  function renderExecutionToday(day, execution) {
+    syncExecutionFromStamps(day, execution);
+    return '<div class="execution-shell"><header class="execution-datebar"><div><span>' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</span><h1 id="execution-title">' + htmlEscape(day.label) + '</h1></div><button type="button" data-finish-execution="' + day.id + '">结束今日</button></header>' + renderExecutionStatus(day) + '<div class="execution-grid"><main>' + renderExecutionCurrent(day, execution) + renderExecutionStamp(day) + '</main><aside>' + renderExecutionCutoff(day) + '<section class="weather-strip execution-weather" id="weather-panel" aria-label="沿途天气风险"><div class="weather-top"><div class="weather-heading"><span>天气风险</span><strong>' + htmlEscape(WEATHER_REGIONS[day.id].name) + '</strong></div><button class="weather-refresh" type="button" data-refresh-weather aria-label="刷新沿途天气" title="刷新沿途天气">' + icon("refresh-cw.svg") + '</button></div><div class="weather-content" aria-live="polite"></div></section></aside></div>' + renderExecutionTimeline(day, execution) + (state.fallbacks[day.id] ? '<section class="execution-fallback"><strong>备选方案已启用</strong><p>' + htmlEscape(day.fallback) + '</p></section>' : "") + "</div>";
+  }
+
   function renderQuickTimeline(day) {
     let startIndex = day.timeline.findIndex(function (item) {
       return item.time === day.next.time && item.title === day.next.title;
@@ -583,6 +973,11 @@
 
   function renderToday() {
     const day = dayById(state.activeDay);
+    const execution = executionForDay(day.id, false);
+    if (execution.status === "active") {
+      document.getElementById("today-content").innerHTML = renderExecutionToday(day, execution);
+      return;
+    }
     const stamps = stampStats();
     const km = completedKm();
     const confirmations = confirmationsForDay(day.id);
@@ -593,6 +988,7 @@
 
     document.getElementById("today-content").innerHTML =
       '<div class="day-title-row"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + '</h2><p>' + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK") + "</small></div></div>" +
+      renderExecutionLauncher(day, execution) +
       '<div class="today-grid"><div class="today-primary">' +
         renderNextCard(day) +
         '<section class="weather-strip" id="weather-panel" aria-label="所选日期沿途天气"><div class="weather-top"><div class="weather-heading"><span>沿途天气</span><strong>' + htmlEscape(WEATHER_REGIONS[day.id].name) + '</strong></div><button class="weather-refresh" type="button" data-refresh-weather aria-label="刷新沿途天气" title="刷新沿途天气">' + icon("refresh-cw.svg") + '</button></div><div class="weather-content" aria-live="polite"></div></section>' +
@@ -762,12 +1158,14 @@
         }).join("") + "</div></section>" +
         '<section class="more-section"><div class="more-section-head"><div>' + icon("settings-2.svg") + '<h2>显示与安装</h2></div></div><div class="settings-list"><label class="setting-row"><span>紧凑显示</span><span class="toggle"><input id="compact-toggle" type="checkbox" ' + (state.compact ? "checked" : "") + '><i></i></span></label><div class="setting-row"><span>安装到手机桌面</span><button id="install-button" class="secondary-button" type="button" ' + (canInstall ? "" : "disabled") + ">" + icon("download.svg") + (canInstall ? "安装" : "由浏览器提供") + "</button></div></div></section>" +
         '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("notebook-pen.svg") + '<h2>全程备忘</h2></div><span class="type-tag">自动保存</span></div><textarea id="trip-notes" rows="6" placeholder="车票、天气、临时变更……">' + htmlEscape(state.notes) + "</textarea></section>" +
-        '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("database.svg") + '<h2>数据备份</h2></div><span class="type-tag">本机保存</span></div><p>导出文件包含旅行支出、打卡点、盖章和备注，可在另一台设备导入。</p><div class="data-actions"><button id="export-button" class="secondary-button" type="button">' + icon("download.svg") + '导出备份</button><button id="import-button" class="secondary-button" type="button">' + icon("upload.svg") + '导入备份</button>' + (hasRecovery ? '<button id="recovery-button" class="secondary-button" type="button">' + icon("history.svg") + "恢复导入前数据</button>" : "") + '<button id="reset-button" class="text-button danger-button" type="button">恢复默认</button></div></section>' +
+        '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("database.svg") + '<h2>数据备份</h2></div><span class="type-tag">本机保存</span></div><p>导出文件包含执行进度、旅行支出、打卡点、盖章和备注，可在另一台设备导入；临时定位不会导出。</p><div class="data-actions"><button id="export-button" class="secondary-button" type="button">' + icon("download.svg") + '导出备份</button><button id="import-button" class="secondary-button" type="button">' + icon("upload.svg") + '导入备份</button>' + (hasRecovery ? '<button id="recovery-button" class="secondary-button" type="button">' + icon("history.svg") + "恢复导入前数据</button>" : "") + '<button id="reset-button" class="text-button danger-button" type="button">恢复默认</button></div></section>' +
       "</div>";
   }
 
   function renderAll() {
     document.body.dataset.density = state.compact ? "compact" : "comfortable";
+    document.body.dataset.executionFocus = state.activeView === "today" && executionForDay(state.activeDay, false).status === "active" ? "true" : "false";
+    document.getElementById("view-today").setAttribute("aria-labelledby", document.body.dataset.executionFocus === "true" ? "execution-title" : "today-title");
     document.querySelectorAll(".app-view").forEach(function (view) {
       view.hidden = view.dataset.view !== state.activeView;
     });
@@ -793,12 +1191,14 @@
     state.activeView = viewName;
     saveState();
     renderAll();
-    if (!preserveScroll) window.scrollTo({ top: 0, behavior: "auto" });
+    if (!preserveScroll) window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function selectDay(dayId) {
     if (!DAY_IDS.includes(dayId)) return;
+    if (state.activeDay !== dayId) clearExecutionLocation();
     state.activeDay = dayId;
+    executionTimelineOpen = false;
     saveState();
     renderAll();
   }
@@ -1143,7 +1543,7 @@
   async function exportBackup() {
     const payload = {
       product: "jeju-olle-trip",
-      version: 4,
+      version: 5,
       exportedAt: new Date().toISOString(),
       state
     };
@@ -1175,11 +1575,17 @@
       const parsed = JSON.parse(await file.text());
       const incoming = parsed && parsed.product === "jeju-olle-trip" ? parsed.state : parsed;
       let nextState;
-      if (incoming && incoming.version === 4) nextState = normalizeState(incoming);
+      if (incoming && incoming.version === 5) nextState = normalizeState(incoming);
+      else if (incoming && incoming.version === 4) nextState = migrateV4(incoming);
       else if (incoming && incoming.version === 3) nextState = migrateLegacy(incoming);
       else throw new Error("不支持的备份版本");
       localStorage.setItem(RECOVERY_KEY, JSON.stringify(state));
       state = nextState;
+      clearExecutionLocation();
+      data.days.forEach(function (day) {
+        const execution = state.executions[day.id];
+        if (execution) syncExecutionFromStamps(day, execution);
+      });
       deletedCheckin = null;
       deletedExpense = null;
       saveState();
@@ -1196,6 +1602,11 @@
     try {
       const recovery = JSON.parse(localStorage.getItem(RECOVERY_KEY));
       state = normalizeState(recovery);
+      clearExecutionLocation();
+      data.days.forEach(function (day) {
+        const execution = state.executions[day.id];
+        if (execution) syncExecutionFromStamps(day, execution);
+      });
       deletedCheckin = null;
       deletedExpense = null;
       saveState();
@@ -1210,6 +1621,7 @@
   function resetState() {
     if (!window.confirm("确认清除新增地点、旅行支出、盖章、确认项和备注，恢复默认行程？")) return;
     state = defaultState();
+    clearExecutionLocation();
     deletedCheckin = null;
     deletedExpense = null;
     localStorage.removeItem(STORAGE_KEY);
@@ -1280,6 +1692,10 @@
   function bindEvents() {
     document.addEventListener("toggle", function (event) {
       const details = event.target;
+      if (details.matches && details.matches("[data-execution-timeline]")) {
+        executionTimelineOpen = details.open;
+        return;
+      }
       if (!details.matches || !details.matches("[data-route-disclosure]")) return;
       if (details.closest(".print-day")) return;
       const key = details.dataset.routeDisclosure;
@@ -1287,6 +1703,42 @@
       else openRouteDetails.delete(key);
     }, true);
     document.addEventListener("click", function (event) {
+      const timelineSummary = event.target.closest("[data-execution-timeline] > summary");
+      if (timelineSummary) executionTimelineOpen = !timelineSummary.parentElement.open;
+      const startExecutionButton = event.target.closest("[data-start-execution]");
+      if (startExecutionButton) {
+        startExecution(startExecutionButton.dataset.startExecution);
+        return;
+      }
+      const reopenExecutionButton = event.target.closest("[data-reopen-execution]");
+      if (reopenExecutionButton) {
+        startExecution(reopenExecutionButton.dataset.reopenExecution);
+        return;
+      }
+      const completeStepButton = event.target.closest("[data-complete-step]");
+      if (completeStepButton) {
+        completeExecutionStep(completeStepButton.dataset.completeStep);
+        return;
+      }
+      const previousStepButton = event.target.closest("[data-previous-step]");
+      if (previousStepButton) {
+        returnToPreviousStep(previousStepButton.dataset.previousStep);
+        return;
+      }
+      const finishExecutionButton = event.target.closest("[data-finish-execution]");
+      if (finishExecutionButton) {
+        finishExecution(finishExecutionButton.dataset.finishExecution);
+        return;
+      }
+      const suggestedStepButton = event.target.closest("[data-suggested-step]");
+      if (suggestedStepButton) {
+        chooseSuggestedStep(suggestedStepButton.dataset.executionDay, suggestedStepButton.dataset.suggestedStep);
+        return;
+      }
+      if (event.target.closest("[data-update-execution-location]")) {
+        updateExecutionLocation();
+        return;
+      }
       if (event.target.closest("[data-refresh-weather]")) {
         refreshWeather(true);
         return;
@@ -1440,6 +1892,10 @@
     document.addEventListener("change", function (event) {
       if (event.target.matches("[data-stamp]")) {
         state.stamps[event.target.dataset.stamp] = event.target.checked;
+        data.days.forEach(function (day) {
+          const execution = state.executions[day.id];
+          if (execution) syncExecutionFromStamps(day, execution);
+        });
         saveState();
         renderAll();
       } else if (event.target.matches("[data-confirmation]")) {
@@ -1493,6 +1949,12 @@
     window.setInterval(function () {
       if (!document.hidden) refreshWeather(false);
     }, WEATHER_REFRESH_MS);
+    window.setInterval(function () {
+      if (!document.hidden && state.activeView === "today" && executionForDay(state.activeDay, false).status === "active") {
+        renderToday();
+        renderWeather();
+      }
+    }, 30000);
   }
 
   function configurePrint() {

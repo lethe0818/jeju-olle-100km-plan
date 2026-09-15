@@ -145,10 +145,10 @@
       lead: "落地后只做一件事：尽快入住并把明早补给准备好。",
       next: { time: "21:35", title: "9C7205抵达济州国际机场", detail: "取行李、入境后直接前往出租车乘车区。", mode: "航班", place: "airport" },
       timeline: [
-        { time: "18:55", title: "北京大兴机场起飞", detail: "春秋航空9C7205，PKX → CJU；最终时间以机票订单为准。", type: "航班" },
-        { time: "21:35", title: "抵达济州国际机场", detail: "预留45–65分钟取行李和入境。", type: "航班", place: "airport" },
-        { time: "22:20", title: "机场出租车 → New Star Hotel", detail: "车程约10–15分钟，向司机出示韩文酒店名和地址。", type: "打车", place: "newStar" },
-        { time: "22:45", title: "办理入住", detail: "确认次日05:35退房；备好早餐、水、电解质和便携午餐。", type: "住宿", place: "newStar" }
+        { id: "0923-step-01", time: "18:55", title: "北京大兴机场起飞", detail: "春秋航空9C7205，PKX → CJU；最终时间以机票订单为准。", type: "航班" },
+        { id: "0923-step-02", time: "21:35", title: "抵达济州国际机场", detail: "预留45–65分钟取行李和入境。", type: "航班", place: "airport" },
+        { id: "0923-step-03", time: "22:20", title: "机场出租车 → New Star Hotel", detail: "车程约10–15分钟，向司机出示韩文酒店名和地址。", type: "打车", place: "newStar" },
+        { id: "0923-step-04", time: "22:45", title: "办理入住", detail: "确认次日05:35退房；备好早餐、水、电解质和便携午餐。", type: "住宿", place: "newStar" }
       ],
       hotel: "newStar"
     },
@@ -157,17 +157,17 @@
       lead: "先坐201路到Playce Camp寄存行李，再返回古城站换反方向201路去始兴里。",
       next: { time: "05:35", title: "New Star Hotel → Playce寄存行李", detail: "步行到济州客运站，目标搭05:55左右的201路。", mode: "公交", place: "playce" },
       timeline: [
-        { time: "05:35", title: "退房，步行前往济州客运站", detail: "约10–15分钟，携带全部行李。", type: "步行", place: "jejuTerminal" },
-        { time: "05:55", title: "201路 → 古城换乘站", detail: "预计07:20–07:35抵达；前一晚复核中秋班次。", type: "公交", place: "playce" },
-        { time: "07:45", title: "Playce Camp寄存行李", detail: "只做快速寄存，必须提前确认清晨可接收行李。", type: "行李", place: "playce" },
-        { time: "07:55", title: "返回古城站，搭201路去始兴里", detail: "在反方向站台乘车，目标08:15–08:25抵达。", type: "公交", place: "siheung" },
-        { time: "08:25", title: "1号线 · 始兴里 → 广峙其海边", detail: "15.1 km，按约4小时快走，起点、中间、终点章都要盖。", type: "徒步", place: "siheung" },
-        { time: "12:20", title: "抵达广峙其海边", detail: "盖终点章后搭211、212或295路前往城山港。", type: "转场", place: "gwangchigi" },
-        { time: "13:00", title: "城山港购票、候船", detail: "现场确认17:30返程船班并补给。", type: "船班", place: "seongsanPort" },
-        { time: "14:00", title: "乘船前往牛岛", detail: "约15分钟抵达，租车时确认17:10前还车。", type: "船班", place: "udo" },
-        { time: "14:30", title: "牛岛1-1号线骑行", detail: "13.2 km，目标约2.5小时；骑行不计认证步行里程。", type: "骑行", place: "udo" },
-        { time: "17:10", title: "回到牛岛码头", detail: "还车后搭17:30返程船，18:00只作紧急备用。", type: "截止", place: "udo", risk: true },
-        { time: "18:00", title: "城山港 → Playce Camp", detail: "搭211、212或295路返回，取行李并办理入住。", type: "公交", place: "playce" }
+        { id: "0924-step-01", time: "05:35", title: "退房，步行前往济州客运站", detail: "约10–15分钟，携带全部行李。", type: "步行", place: "jejuTerminal" },
+        { id: "0924-step-02", time: "05:55", title: "201路 → 古城换乘站", detail: "预计07:20–07:35抵达；前一晚复核中秋班次。", type: "公交", place: "playce" },
+        { id: "0924-step-03", time: "07:45", title: "Playce Camp寄存行李", detail: "只做快速寄存，必须提前确认清晨可接收行李。", type: "行李", place: "playce" },
+        { id: "0924-step-04", time: "07:55", title: "返回古城站，搭201路去始兴里", detail: "在反方向站台乘车，目标08:15–08:25抵达。", type: "公交", place: "siheung" },
+        { id: "0924-step-05", time: "08:25", title: "1号线 · 始兴里 → 广峙其海边", detail: "15.1 km，按约4小时快走，起点、中间、终点章都要盖。", type: "徒步", place: "siheung" },
+        { id: "0924-step-06", time: "12:20", title: "抵达广峙其海边", detail: "盖终点章后搭211、212或295路前往城山港。", type: "转场", place: "gwangchigi" },
+        { id: "0924-step-07", time: "13:00", title: "城山港购票、候船", detail: "现场确认17:30返程船班并补给。", type: "船班", place: "seongsanPort" },
+        { id: "0924-step-08", time: "14:00", title: "乘船前往牛岛", detail: "约15分钟抵达，租车时确认17:10前还车。", type: "船班", place: "udo" },
+        { id: "0924-step-09", time: "14:30", title: "牛岛1-1号线骑行", detail: "13.2 km，目标约2.5小时；骑行不计认证步行里程。", type: "骑行", place: "udo" },
+        { id: "0924-step-10", time: "17:10", title: "回到牛岛码头", detail: "还车后搭17:30返程船，18:00只作紧急备用。", type: "截止", place: "udo", risk: true },
+        { id: "0924-step-11", time: "18:00", title: "城山港 → Playce Camp", detail: "搭211、212或295路返回，取行李并办理入住。", type: "公交", place: "playce" }
       ],
       cutoff: "08:05仍未离开酒店就打车去始兴里；12:35尚未走完1号线则取消牛岛骑行。",
       fallback: "牛岛取消后，从广峙其海边搭201、211、212或295路返回Playce Camp。",
@@ -178,12 +178,12 @@
       lead: "大件行李必须提前安排转送或寄存，只背日包完成23.5 km。",
       next: { time: "05:45", title: "Playce Camp → 南元浦口", detail: "确认大件行李去向后打车45–55分钟，201路仅作备选。", mode: "打车", place: "namwon" },
       timeline: [
-        { time: "05:45", title: "退房，确认大件行李已转送", detail: "只携带徒步日包；未确认行李方案时不要直接开走。", type: "行李", place: "playce" },
-        { time: "06:45", title: "5号线 · 南元 → 牛沼河口", detail: "13.4 km，目标3.5–4小时，完成三章。", type: "徒步", place: "namwon" },
-        { time: "10:30", title: "牛沼河口短休整", detail: "补水、进食后接走6号线，不安排正式午餐。", type: "补给", place: "soesokkak" },
-        { time: "10:45", title: "6号线 · 牛沼河口 → 旅行者中心", detail: "10.1 km，目标2.5–3小时，完成三章。", type: "徒步", place: "soesokkak" },
-        { time: "14:30", title: "抵达济州偶来旅行者中心", detail: "最晚目标15:30，步行约10–15分钟去酒店。", type: "到达", place: "traveler" },
-        { time: "15:00", title: "入住Kenny Stay", detail: "取回大件行李，9月25日与26日连住两晚。", type: "住宿", place: "kenny" }
+        { id: "0925-step-01", time: "05:45", title: "退房，确认大件行李已转送", detail: "只携带徒步日包；未确认行李方案时不要直接开走。", type: "行李", place: "playce" },
+        { id: "0925-step-02", time: "06:45", title: "5号线 · 南元 → 牛沼河口", detail: "13.4 km，目标3.5–4小时，完成三章。", type: "徒步", place: "namwon" },
+        { id: "0925-step-03", time: "10:30", title: "牛沼河口短休整", detail: "补水、进食后接走6号线，不安排正式午餐。", type: "补给", place: "soesokkak" },
+        { id: "0925-step-04", time: "10:45", title: "6号线 · 牛沼河口 → 旅行者中心", detail: "10.1 km，目标2.5–3小时，完成三章。", type: "徒步", place: "soesokkak" },
+        { id: "0925-step-05", time: "14:30", title: "抵达济州偶来旅行者中心", detail: "最晚目标15:30，步行约10–15分钟去酒店。", type: "到达", place: "traveler" },
+        { id: "0925-step-06", time: "15:00", title: "入住Kenny Stay", detail: "取回大件行李，9月25日与26日连住两晚。", type: "住宿", place: "kenny" }
       ],
       cutoff: "中秋当天不要把沿途餐厅、便利店或游客中心正常营业作为前提。",
       fallback: "行李转送未确认时，先联系Kenny或Playce，不背大件行李走完整路线。",
@@ -194,11 +194,11 @@
       lead: "利用酒店与线路闭环位置，全天轻装完成28.6 km。",
       next: { time: "06:15", title: "Kenny Stay → 旅行者中心", detail: "步行约10–15分钟，06:30准时开走。", mode: "步行", place: "traveler" },
       timeline: [
-        { time: "06:15", title: "从酒店步行出发", detail: "行李留在连住酒店，只带徒步装备。", type: "步行", place: "kenny" },
-        { time: "06:30", title: "7号线 · 旅行者中心 → 西归浦客运站", detail: "12.9 km，目标3–3.5小时，完成三章。", type: "徒步", place: "traveler" },
-        { time: "09:45", title: "客运站补给与盖章", detail: "预留20–30分钟补水进食，确认7-1起点章。", type: "补给", place: "seogwipoTerminal" },
-        { time: "10:15", title: "7-1号线 · 客运站 → 旅行者中心", detail: "15.7 km，目标4–4.5小时，完成三章。", type: "徒步", place: "seogwipoTerminal" },
-        { time: "14:30", title: "回到旅行者中心", detail: "最晚目标15:30，之后步行返回Kenny Stay。", type: "到达", place: "traveler" }
+        { id: "0926-step-01", time: "06:15", title: "从酒店步行出发", detail: "行李留在连住酒店，只带徒步装备。", type: "步行", place: "kenny" },
+        { id: "0926-step-02", time: "06:30", title: "7号线 · 旅行者中心 → 西归浦客运站", detail: "12.9 km，目标3–3.5小时，完成三章。", type: "徒步", place: "traveler" },
+        { id: "0926-step-03", time: "09:45", title: "客运站补给与盖章", detail: "预留20–30分钟补水进食，确认7-1起点章。", type: "补给", place: "seogwipoTerminal" },
+        { id: "0926-step-04", time: "10:15", title: "7-1号线 · 客运站 → 旅行者中心", detail: "15.7 km，目标4–4.5小时，完成三章。", type: "徒步", place: "seogwipoTerminal" },
+        { id: "0926-step-05", time: "14:30", title: "回到旅行者中心", detail: "最晚目标15:30，之后步行返回Kenny Stay。", type: "到达", place: "traveler" }
       ],
       cutoff: "下午出现持续膝痛、脚踝痛或水泡恶化时，停止追求计划配速。",
       fallback: "从可安全离开的主路站点返回酒店；证书仍优先于单日完整性。",
@@ -213,13 +213,13 @@
       lead: "先完成8号线；仅在时间和身体状态都达标时继续10号线前段。",
       next: { time: "05:35", title: "Kenny Stay → 月坪起点", detail: "大件行李提前转送Amantov，轻装打车20–25分钟。", mode: "打车", place: "wolpyeong" },
       timeline: [
-        { time: "05:35", title: "退房，确认大件行李已转送", detail: "只携带日包；520/600路仅作非早班备选。", type: "行李", place: "kenny" },
-        { time: "06:10", title: "8号线 · 月坪 → 大坪", detail: "19.3 km，目标4.5–5小时，完成三章。", type: "徒步", place: "wolpyeong" },
-        { time: "11:00", title: "大坪短休与身体评估", detail: "仅在11:15前完成且无明显疼痛、水泡恶化时继续。", type: "检查", place: "daepyeong" },
-        { time: "11:30", title: "前往和顺金沙滩", detail: "打车约20–30分钟；12:30前必须开走10号线。", type: "打车", place: "hwasun" },
-        { time: "12:30", title: "10号线前段 · 和顺 → Seotal Oreum", detail: "走约11.4 km，依次完成起点章和中间章。", type: "徒步", place: "hwasun" },
-        { time: "16:10", title: "抵达10号线中间章", detail: "在停车场亭子盖章，到此停止，不继续赶终点。", type: "盖章", place: "seotal" },
-        { time: "16:25", title: "中间章 → Amantov Pension", detail: "直接打车返回并取大件行李，约20–30分钟。", type: "打车", place: "amantov" }
+        { id: "0927-step-01", time: "05:35", title: "退房，确认大件行李已转送", detail: "只携带日包；520/600路仅作非早班备选。", type: "行李", place: "kenny" },
+        { id: "0927-step-02", time: "06:10", title: "8号线 · 月坪 → 大坪", detail: "19.3 km，目标4.5–5小时，完成三章。", type: "徒步", place: "wolpyeong" },
+        { id: "0927-step-03", time: "11:00", title: "大坪短休与身体评估", detail: "仅在11:15前完成且无明显疼痛、水泡恶化时继续。", type: "检查", place: "daepyeong" },
+        { id: "0927-step-04", time: "11:30", title: "前往和顺金沙滩", detail: "打车约20–30分钟；12:30前必须开走10号线。", type: "打车", place: "hwasun" },
+        { id: "0927-step-05", time: "12:30", title: "10号线前段 · 和顺 → Seotal Oreum", detail: "走约11.4 km，依次完成起点章和中间章。", type: "徒步", place: "hwasun" },
+        { id: "0927-step-06", time: "16:10", title: "抵达10号线中间章", detail: "在停车场亭子盖章，到此停止，不继续赶终点。", type: "盖章", place: "seotal" },
+        { id: "0927-step-07", time: "16:25", title: "中间章 → Amantov Pension", detail: "直接打车返回并取大件行李，约20–30分钟。", type: "打车", place: "amantov" }
       ],
       cutoff: "8号线11:15后结束、有明显疼痛，或12:30仍未从和顺出发，立即取消10号线前段。",
       fallback: "当天只完成8号线；9月28日取消加波岛，清晨完整走10号线，认证仍约102.1 km。",
@@ -234,25 +234,87 @@
       lead: "先完成10号线达到102.1 km；加波岛可取消，返港后尽早办理证书。",
       next: { time: "06:30", title: "起床、早餐与整理行李", detail: "全部行李在07:00前整理完成。", mode: "准备", place: "amantov" },
       timeline: [
-        { time: "06:30", title: "起床、早餐与整理行李", detail: "早餐从简，07:00准时退房。", type: "准备", place: "amantov" },
-        { time: "07:00", title: "打车返回10号线中间章", detail: "携带全部行李，车程约20–30分钟。", type: "打车", place: "seotal" },
-        { time: "07:25", title: "续走10号线 · Seotal → 摹瑟浦", detail: "剩余约4.2 km，目标1小时10分钟，抵达后盖终点章。", type: "徒步", place: "seotal" },
-        { time: "08:35", title: "完成10号线，累计102.1 km", detail: "暂不等09:00领证，直接前往云津港。", type: "到达", place: "hamo" },
-        { time: "08:45", title: "摹瑟浦 → 云津港", detail: "打车约5–10分钟，预留充足取票时间。", type: "打车", place: "unjin" },
-        { time: "10:00", title: "乘船前往加波岛", detail: "返程时间以往返订单为准，优先12:20返港组合。", type: "船班", place: "gapado" },
-        { time: "10:20", title: "10-1号线 · 加波岛", detail: "4.2 km，官方图标起点与终点两章；终点在加波治安中心，返码头需另留时间。", type: "徒步", place: "gapado" },
-        { time: "12:20", title: "目标返船 · 先确认回港接驳", detail: "10-1终点不在上洞浦口；只有确认终点回港交通与返船时间后才安排此船，否则选较晚班。", type: "船班", place: "unjin" },
-        { time: "13:00", title: "目标领取100 km证书", detail: "返港后携本人纸质护照办理；若晚船返港，顺延办理但须赶在16:30受理结束前。", type: "证书", place: "hamo" },
-        { time: "13:35", title: "午餐或直接去机场", detail: "美荣家与提前去机场二选一；用餐则14:30后出发。", type: "选择", place: "miyeong" },
-        { time: "14:30", title: "摹瑟浦 → 济州机场", detail: "搭明确途经机场的151系列班次；无合适班次则打车。", type: "公交", place: "airport" },
-        { time: "16:00", title: "抵达济州机场", detail: "最晚不晚于19:30抵达，预留国际航班手续时间。", type: "航班", place: "airport" },
-        { time: "22:40", title: "7C8133飞往北京首都", detail: "CJU → PEK T2，预计次日01:10抵达；以订单为准。", type: "航班" }
+        { id: "0928-step-01", time: "06:30", title: "起床、早餐与整理行李", detail: "早餐从简，07:00准时退房。", type: "准备", place: "amantov" },
+        { id: "0928-step-02", time: "07:00", title: "打车返回10号线中间章", detail: "携带全部行李，车程约20–30分钟。", type: "打车", place: "seotal" },
+        { id: "0928-step-03", time: "07:25", title: "续走10号线 · Seotal → 摹瑟浦", detail: "剩余约4.2 km，目标1小时10分钟，抵达后盖终点章。", type: "徒步", place: "seotal" },
+        { id: "0928-step-04", time: "08:35", title: "完成10号线，累计102.1 km", detail: "暂不等09:00领证，直接前往云津港。", type: "到达", place: "hamo" },
+        { id: "0928-step-05", time: "08:45", title: "摹瑟浦 → 云津港", detail: "打车约5–10分钟，预留充足取票时间。", type: "打车", place: "unjin" },
+        { id: "0928-step-06", time: "10:00", title: "乘船前往加波岛", detail: "返程时间以往返订单为准，优先12:20返港组合。", type: "船班", place: "gapado" },
+        { id: "0928-step-07", time: "10:20", title: "10-1号线 · 加波岛", detail: "4.2 km，官方图标起点与终点两章；终点在加波治安中心，返码头需另留时间。", type: "徒步", place: "gapado" },
+        { id: "0928-step-08", time: "12:20", title: "目标返船 · 先确认回港接驳", detail: "10-1终点不在上洞浦口；只有确认终点回港交通与返船时间后才安排此船，否则选较晚班。", type: "船班", place: "unjin" },
+        { id: "0928-step-09", time: "13:00", title: "目标领取100 km证书", detail: "返港后携本人纸质护照办理；若晚船返港，顺延办理但须赶在16:30受理结束前。", type: "证书", place: "hamo" },
+        { id: "0928-step-10", time: "13:35", title: "午餐或直接去机场", detail: "美荣家与提前去机场二选一；用餐则14:30后出发。", type: "选择", place: "miyeong" },
+        { id: "0928-step-11", time: "14:30", title: "摹瑟浦 → 济州机场", detail: "搭明确途经机场的151系列班次；无合适班次则打车。", type: "公交", place: "airport" },
+        { id: "0928-step-12", time: "16:00", title: "抵达济州机场", detail: "最晚不晚于19:30抵达，预留国际航班手续时间。", type: "航班", place: "airport" },
+        { id: "0928-step-13", time: "22:40", title: "7C8133飞往北京首都", detail: "CJU → PEK T2，预计次日01:10抵达；以订单为准。", type: "航班" }
       ],
       cutoff: "09:00仍未完成10号线、或无法确认加波岛返港接驳与证书16:30前受理，则取消加波岛；返港延误先领证，跳过午餐。",
       fallback: "加波岛停航：完成10号线并领取证书后直接休整或前往机场。",
       hotel: null
     }
   ];
+
+  const completionStampsByStep = {
+    "0924-step-05": ["1-start", "1-middle", "1-end"],
+    "0924-step-09": ["1-1-start", "1-1-middle", "1-1-end"],
+    "0925-step-02": ["5-start", "5-middle", "5-end"],
+    "0925-step-04": ["6-start", "6-middle", "6-end"],
+    "0926-step-02": ["7-start", "7-middle", "7-end"],
+    "0926-step-04": ["7-1-start", "7-1-middle", "7-1-end"],
+    "0927-step-02": ["8-start", "8-middle", "8-end"],
+    "0927-step-06": ["10-start", "10-middle"],
+    "0928-step-04": ["10-end"],
+    "0928-step-07": ["10-1-start", "10-1-end"]
+  };
+
+  const cutoffsByDay = {
+    "0923": [
+      { id: "0923-hotel", time: "23:30", title: "完成入住与补给", action: "若入境延误，先入住，取消当晚其他安排。" }
+    ],
+    "0924": [
+      { id: "0924-leave-hotel", time: "08:05", title: "最晚离开酒店去始兴里", action: "超过即改打车，不再继续等公交。" },
+      { id: "0924-route-1", time: "12:35", title: "必须完成1号线", action: "仍未完成则取消牛岛骑行，优先盖齐三章。" },
+      { id: "0924-udo-return", time: "17:10", title: "回到牛岛码头", action: "立即还车并搭计划返船，18:00只作紧急备用。" }
+    ],
+    "0925": [
+      { id: "0925-luggage", time: "05:45", title: "确认大件行李去向", action: "未确认转送或寄存时不要背大件行李开走。" },
+      { id: "0925-finish", time: "15:30", title: "抵达旅行者中心", action: "中秋不依赖沿途营业点，必要时缩短休息。" }
+    ],
+    "0926": [
+      { id: "0926-finish", time: "15:30", title: "回到旅行者中心", action: "若持续疼痛或水泡恶化，先从主路安全撤出。" }
+    ],
+    "0927": [
+      { id: "0927-route-8", time: "11:15", title: "完成8号线并评估身体", action: "延误或明显疼痛时取消10号线前段。" },
+      { id: "0927-route-10", time: "12:30", title: "必须从和顺开走", action: "仍未出发则取消10号线前段，次日完整走10号线。" }
+    ],
+    "0928": [
+      { id: "0928-route-10", time: "09:00", title: "必须完成10号线", action: "仍未完成则取消加波岛，先确保100 km认证。" },
+      { id: "0928-certificate", time: "16:30", title: "证书受理结束", action: "返港延误时先领证，跳过午餐与其他停留。" }
+    ]
+  };
+
+  const cutoffStepIds = {
+    "0923-hotel": "0923-step-04",
+    "0924-leave-hotel": "0924-step-04",
+    "0924-route-1": "0924-step-05",
+    "0924-udo-return": "0924-step-10",
+    "0925-luggage": "0925-step-01",
+    "0925-finish": "0925-step-05",
+    "0926-finish": "0926-step-05",
+    "0927-route-8": "0927-step-02",
+    "0927-route-10": "0927-step-05",
+    "0928-route-10": "0928-step-04",
+    "0928-certificate": "0928-step-09"
+  };
+
+  days.forEach(function (day) {
+    day.timeline.forEach(function (item) {
+      if (completionStampsByStep[item.id]) item.completionStamps = completionStampsByStep[item.id].slice();
+    });
+    day.cutoffs = (cutoffsByDay[day.id] || []).map(function (item) {
+      return Object.assign({ resolveStepId: cutoffStepIds[item.id] }, item);
+    });
+  });
 
   const confirmations = [
     { id: "playce-luggage", dayId: "0924", label: "Playce 07:45寄存已确认", hint: "联系酒店" },

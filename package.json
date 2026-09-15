@@ -1,6 +1,6 @@
 {
   "name": "jeju-olle-trip-assistant",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "private": true,
   "scripts": {
     "test": "playwright test tests/app.spec.js --reporter=line"

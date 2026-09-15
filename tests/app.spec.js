@@ -6,12 +6,17 @@ const path = require("node:path");
 const url = "http://127.0.0.1:4183/";
 let testServer;
 
-function startStaticServer(port) {
+function startStaticServer(port, basePath = "") {
   const mime = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg" };
   const root = process.cwd();
   const server = http.createServer((request, response) => {
     const requestPath = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
-    const relativePath = requestPath === "/" ? "index.html" : requestPath.replace(/^\/+/, "");
+    if (basePath && requestPath !== basePath && !requestPath.startsWith(basePath + "/")) {
+      response.writeHead(404).end();
+      return;
+    }
+    const scopedPath = basePath ? requestPath.slice(basePath.length) : requestPath;
+    const relativePath = scopedPath === "/" || scopedPath === "" ? "index.html" : scopedPath.replace(/^\/+/, "");
     const filePath = path.resolve(root, relativePath);
     if (!filePath.startsWith(root) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
       response.writeHead(404).end();
@@ -171,7 +176,7 @@ test("route features and scenic check-ins stay in walking order and share progre
   await expect(page.locator("#plan-content .route-guide-disclosure")).not.toHaveAttribute("open", "");
   await page.getByRole("button", { name: "打卡", exact: true }).click();
   await expect(page.locator('#checkin-list .checkin-card.completed', { hasText: "马头岳" }).locator(".location-warning")).toContainText("按韩文地名搜索");
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")).checkinChecks["route-1-malmi"])).toBe(true);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")).checkinChecks["route-1-malmi"])).toBe(true);
   await page.getByRole("button", { name: "今日", exact: true }).click();
   const teaser = page.locator("#today-content .route-teaser");
   await expect(teaser).not.toHaveAttribute("open", "");
@@ -240,7 +245,7 @@ test("official stamp locations, split route 10, and two-stamp Gapado course", as
   await page.reload();
   await expect(page.locator('[data-stamp="10-1-start"]')).toBeChecked();
   await expect(page.locator('[data-stamp="10-1-end"]')).toBeChecked();
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")).stamps["10-middle"])).toBe(true);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")).stamps["10-middle"])).toBe(true);
   const routeData = await page.evaluate(() => window.TRIP_DATA);
   expect(Object.keys(routeData.stampLocations)).toHaveLength(9);
   expect(routeData.routes["10-1"].stamps).toEqual(["start", "end"]);
@@ -277,8 +282,8 @@ test("mobile custom check-in flow", async ({ page }) => {
   await expect(createdCard).toBeVisible();
   await expect(createdCard.locator('[data-map-app="Kakao Map"]')).toHaveAttribute("data-app-url", /^kakaomap:\/\/route\?ep=33\.2501234,126\.5601234/);
   await expect(createdCard.locator('[data-map-app="Naver Map"]')).toHaveAttribute("data-app-url", /^nmap:\/\/route\/walk\?/);
-  let stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")));
-  expect(stored.version).toBe(4);
+  let stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(stored.version).toBe(5);
   expect(stored.customCheckins[0].lat).toBeCloseTo(33.2501234);
   await page.reload();
   const card = page.locator("#checkin-list .checkin-card", { hasText: "测试海景台" });
@@ -314,9 +319,9 @@ test("migration, corrected content, tablet layout", async ({ browser }) => {
     }));
   });
   await page.reload();
-  const migrated = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")));
+  const migrated = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
   const coreKm = await page.evaluate(() => Object.values(window.TRIP_DATA.routes).filter(route => route.counts && !route.optional).reduce((sum, route) => sum + route.km, 0));
-  expect(migrated.version).toBe(4);
+  expect(migrated.version).toBe(5);
   expect(migrated.notes).toBe("legacy note");
   expect(migrated.checkinChecks.miyeong).toBe(true);
   expect(coreKm).toBeCloseTo(102.1);
@@ -381,7 +386,7 @@ test("backup validation, coordinate fallback, and location denial", async ({ bro
   await expect(page.locator("#checkin-list .checkin-card", { hasText: "导入测试点" })).toBeVisible();
   await expect(page.locator("#checkin-list .checkin-card", { hasText: "导入测试点" })).toContainText("定位待补充");
   await expect(page.locator("#checkin-list .checkin-card", { hasText: "导入测试点" }).locator('[data-map-app="Kakao Map"]')).toHaveAttribute("href", "https://kko.to/example-short-link");
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")));
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
   expect(saved.customCheckins[0].lat).toBeNull();
   expect(saved.customCheckins[0].lng).toBeNull();
 
@@ -470,7 +475,7 @@ test("expense import validation preserves earlier version 4 data", async ({ brow
 
   const oldBackup = { version: 4, activeView: "more", activeDay: "0928", customCheckins: [{ id: "old", name: "原有打卡点", dayId: "0928", category: "food" }] };
   await page.locator("#import-file").setInputFiles({ name: "old.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(oldBackup)) });
-  let state = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")));
+  let state = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
   expect(state.customCheckins).toHaveLength(1);
   expect(state.expenses).toEqual([]);
 
@@ -480,10 +485,10 @@ test("expense import validation preserves earlier version 4 data", async ({ brow
     { id: "bad-day", title: "异常日期", dayId: "0930", category: "food", amount: 5, currency: "KRW" }
   ] };
   await page.locator("#import-file").setInputFiles({ name: "mixed.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(mixedBackup)) });
-  state = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")));
+  state = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
   expect(state.expenses).toHaveLength(1);
   await page.locator("#recovery-button").click();
-  state = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")));
+  state = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
   expect(state.customCheckins).toHaveLength(1);
   expect(state.expenses).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
@@ -493,4 +498,279 @@ test("expense import validation preserves earlier version 4 data", async ({ brow
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
   await page.screenshot({ path: "test-results/ledger-desktop-1440.png" });
   await context.close();
+});
+
+test("walk mode advances manually, resumes, goes back, finishes and reopens", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.clock.install({ time: new Date("2026-09-24T00:00:00Z") });
+  await page.route("https://api.open-meteo.com/v1/forecast?**", route => route.abort());
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url);
+  await expect(page.locator("[data-start-execution='0924']")).toBeVisible();
+  await page.locator("[data-start-execution='0924']").click();
+  await expect(page.locator("#today-overview")).toBeHidden();
+  await expect(page.locator("#today-day-tabs")).toBeHidden();
+  await expect(page.locator(".execution-current")).toContainText("退房，步行前往济州客运站");
+  await expect(page.locator(".execution-stamp")).toContainText("1号线 · 起点章");
+  await expect(page.locator(".execution-timeline")).not.toHaveAttribute("open", "");
+  await page.screenshot({ path: "test-results/execution-mobile-390.png" });
+  await page.locator("[data-complete-step]").click();
+  await expect(page.locator(".execution-current")).toContainText("201路 → 古城换乘站");
+  await page.reload();
+  await expect(page.locator(".execution-current")).toContainText("201路 → 古城换乘站");
+  await page.locator("[data-previous-step]").click();
+  await expect(page.locator(".execution-current")).toContainText("退房，步行前往济州客运站");
+  let stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(stored.executions["0924"].stepStates["0924-step-01"]).toBeUndefined();
+  await page.locator(".execution-timeline summary").click();
+  await expect(page.locator(".execution-timeline")).toHaveAttribute("open", "");
+  await page.clock.fastForward(30000);
+  await expect(page.locator(".execution-timeline")).toHaveAttribute("open", "");
+  page.once("dialog", dialog => {
+    expect(dialog.message()).toContain("11 个步骤未完成、6 枚章未盖");
+    dialog.accept();
+  });
+  await page.locator(".execution-datebar [data-finish-execution]").click();
+  await expect(page.locator("[data-reopen-execution='0924']")).toBeVisible();
+  stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(stored.executions["0924"].status).toBe("finished");
+  await page.locator("[data-reopen-execution='0924']").click();
+  await expect(page.locator(".execution-current")).toContainText("退房，步行前往济州客运站");
+  expect(errors).toEqual([]);
+});
+
+test("stamp-linked route steps require all stamps and next stamp follows day order", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-09-24T00:00:00Z") });
+  await page.goto(url);
+  await page.locator("[data-start-execution='0924']").click();
+  for (let index = 0; index < 4; index++) await page.locator("[data-complete-step]").click();
+  await expect(page.locator(".execution-current")).toContainText("1号线 · 始兴里");
+  await page.locator("[data-complete-step]").click();
+  await expect(page.locator("#toast")).toContainText("还缺 3 枚关联章");
+  await page.locator(".execution-stamp-check").click();
+  await expect(page.locator(".execution-stamp")).toContainText("목화휴게소");
+  await expect(page.locator(".execution-stamp")).toContainText("精确坐标未核实");
+  await expect(page.locator(".execution-stamp [data-update-execution-location]")).toHaveCount(0);
+  await page.getByRole("button", { name: "计划" }).click();
+  await page.locator("#plan-content [data-stamp='1-middle']").check();
+  await page.locator("#plan-content [data-stamp='1-end']").check();
+  await page.getByRole("button", { name: "今日", exact: true }).click();
+  await expect(page.locator(".execution-current")).toContainText("抵达广峙其海边");
+  await expect(page.locator(".execution-stamp")).toContainText("1-1号线 · 起点章");
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(stored.executions["0924"].stepStates["0924-step-05"]).toEqual({ done: true });
+  await page.locator("[data-previous-step]").click();
+  await expect(page.locator("#toast")).toContainText("关联章已盖齐");
+  await page.getByRole("button", { name: "计划" }).click();
+  await page.locator("#plan-content [data-stamp='1-end']").uncheck();
+  await page.getByRole("button", { name: "今日", exact: true }).click();
+  await page.locator("[data-previous-step]").click();
+  await expect(page.locator(".execution-current")).toContainText("1号线 · 始兴里");
+});
+
+test("Jeju clock suggests without advancing and cutoff changes tone at 60 minutes", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-09-24T00:00:00Z") });
+  await page.goto(url);
+  await page.locator("[data-start-execution='0924']").click();
+  await expect(page.locator(".execution-current")).toContainText("退房，步行前往济州客运站");
+  await expect(page.locator(".execution-suggestion")).toContainText("1号线 · 始兴里");
+  await expect(page.locator(".execution-cutoff")).toHaveClass(/overdue/);
+  for (let index = 0; index < 4; index++) await page.locator("[data-complete-step]").click();
+  await expect(page.locator(".execution-cutoff")).toHaveClass(/normal/);
+  await expect(page.locator(".execution-cutoff")).toHaveAttribute("data-cutoff-id", "0924-route-1");
+  await page.clock.setFixedTime(new Date("2026-09-24T02:45:00Z"));
+  await page.clock.fastForward(30000);
+  await expect(page.locator(".execution-cutoff")).toHaveClass(/warning/);
+  await expect(page.locator(".execution-cutoff")).toContainText("还剩 50 分");
+  await page.clock.setFixedTime(new Date("2026-09-24T03:36:00Z"));
+  await page.clock.fastForward(30000);
+  await expect(page.locator(".execution-cutoff")).toHaveClass(/overdue/);
+  await expect(page.locator(".execution-cutoff")).toContainText("已超时");
+  await expect(page.locator(".execution-suggestion")).toContainText("抵达广峙其海边");
+  await page.locator(".execution-suggestion button").click();
+  await expect(page.locator(".execution-current")).toContainText("抵达广峙其海边");
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(Object.keys(stored.executions["0924"].stepStates)).toHaveLength(4);
+  await page.clock.setFixedTime(new Date("2026-09-24T15:30:00Z"));
+  await page.clock.fastForward(30000);
+  await expect(page.locator(".execution-suggestion")).toHaveCount(0);
+  expect(Object.keys((await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")))).executions["0924"].stepStates)).toHaveLength(4);
+});
+
+test("on-demand location reports straight-line distance and accuracy without persisting", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, acceptDownloads: true });
+  await context.grantPermissions(["geolocation"]);
+  await context.setGeolocation({ latitude: 33.47098, longitude: 126.88892, accuracy: 180 });
+  const page = await context.newPage();
+  await page.goto(url);
+  await page.locator('#view-today [data-day="0924"]').click();
+  await page.locator("[data-start-execution='0924']").click();
+  await expect(page.locator(".execution-location")).toContainText("点击后仅申请一次位置权限");
+  await page.locator("[data-update-execution-location]").click();
+  await expect(page.locator(".execution-location")).toContainText("直线约 0 m");
+  await expect(page.locator(".execution-location")).toContainText("精度 ±180 m（低精度）");
+  await page.getByRole("button", { name: "计划" }).click();
+  await page.locator('#view-plan [data-day="0925"]').click();
+  await page.locator('#view-plan [data-day="0924"]').click();
+  await page.getByRole("button", { name: "今日", exact: true }).click();
+  await expect(page.locator(".execution-location")).toContainText("点击后仅申请一次位置权限");
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(JSON.stringify(stored)).not.toMatch(/executionLocation|33\.47098/);
+  await page.getByRole("button", { name: "更多" }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator("#export-button").click();
+  const backup = JSON.parse(fs.readFileSync(await (await downloadPromise).path(), "utf8"));
+  expect(backup.version).toBe(5);
+  expect(backup.state.executions["0924"].status).toBe("active");
+  expect(JSON.stringify(backup)).not.toMatch(/executionLocation|33\.47098/);
+  await page.reload();
+  await page.getByRole("button", { name: "今日", exact: true }).click();
+  await expect(page.locator(".execution-location")).toContainText("点击后仅申请一次位置权限");
+  await context.close();
+});
+
+test("location denial and timeout are visible, and unverified stamp has no distance", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "geolocation", { configurable: true, value: {
+      getCurrentPosition: (_success, failure) => failure({ code: 1 })
+    } });
+  });
+  await page.goto(url);
+  await page.locator('#view-today [data-day="0924"]').click();
+  await page.locator("[data-start-execution='0924']").click();
+  await page.locator("[data-update-execution-location]").click();
+  await expect(page.locator(".execution-location")).toContainText("定位权限被拒绝");
+  await page.evaluate(() => {
+    navigator.geolocation.getCurrentPosition = (_success, failure) => failure({ code: 3 });
+  });
+  await page.locator("[data-update-execution-location]").click();
+  await expect(page.locator(".execution-location")).toContainText("定位超时，请重试");
+  await page.locator(".execution-stamp-check").click();
+  await expect(page.locator(".execution-location")).toContainText("精确坐标未核实，不计算距离");
+  await expect(page.locator(".execution-stamp [data-update-execution-location]")).toHaveCount(0);
+});
+
+test("late location response is ignored after changing day and initial day uses Jeju midnight", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-09-23T15:30:00Z") });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "geolocation", { configurable: true, value: {
+      getCurrentPosition: success => { window.resolveTripLocation = success; }
+    } });
+  });
+  await page.goto(url);
+  await expect(page.locator('#view-today [data-day="0924"]')).toHaveAttribute("aria-selected", "true");
+  await page.locator("[data-start-execution='0924']").click();
+  await page.locator("[data-update-execution-location]").click();
+  await expect(page.locator(".execution-location")).toContainText("正在获取当前位置");
+  await page.getByRole("button", { name: "计划" }).click();
+  await page.locator('#view-plan [data-day="0925"]').click();
+  await page.locator('#view-plan [data-day="0924"]').click();
+  await page.getByRole("button", { name: "今日", exact: true }).click();
+  await page.evaluate(() => window.resolveTripLocation({ coords: { latitude: 33.47098, longitude: 126.88892, accuracy: 25 } }));
+  await expect(page.locator(".execution-location")).toContainText("点击后仅申请一次位置权限");
+  expect(JSON.stringify(await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5"))))).not.toContain("33.47098");
+});
+
+test("version 4 migration and version 5 backup retain trip data and validate step IDs", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 768, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(url);
+  await page.evaluate(() => {
+    localStorage.setItem("jeju-olle-plan-v5", "{damaged-json");
+    localStorage.setItem("jeju-olle-plan-v4", JSON.stringify({
+      version: 4, activeView: "today", activeDay: "0927", compact: true,
+      stamps: { "8-start": true }, checkinChecks: { miyeong: true },
+      customCheckins: [{ id: "old-food", name: "老打卡点", dayId: "0927", category: "food" }],
+      expenses: [{ id: "old-cost", title: "公交车", dayId: "0927", amount: 1500, currency: "KRW" }],
+      notes: "旧版备注", dayNotes: { "0927": "旧版日记" },
+      confirmations: { "amantov-luggage": true }, fallbacks: { "0927": true }
+    }));
+  });
+  await page.reload();
+  let stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(stored.version).toBe(5);
+  expect(stored.stamps["8-start"]).toBe(true);
+  expect(stored.checkinChecks.miyeong).toBe(true);
+  expect(stored.customCheckins).toHaveLength(1);
+  expect(stored.expenses).toHaveLength(1);
+  expect(stored.notes).toBe("旧版备注");
+  expect(stored.dayNotes["0927"]).toBe("旧版日记");
+  expect(stored.confirmations["amantov-luggage"]).toBe(true);
+  expect(stored.fallbacks["0927"]).toBe(true);
+  expect(stored.executions).toEqual({});
+  await page.locator("[data-start-execution='0927']").click();
+  await page.locator("[data-complete-step]").click();
+  await expect(page.locator(".execution-fallback")).toContainText("当天只完成8号线");
+  await expect(page.locator(".execution-timeline-item")).toHaveCount(7);
+  await page.getByRole("button", { name: "更多" }).click();
+  const validBackup = { product: "jeju-olle-trip", version: 5, state: {
+    version: 5, activeView: "today", activeDay: "0928", notes: "导入的执行进度",
+    stamps: { "10-start": true, "10-middle": true },
+    executions: { "0928": { status: "active", activeStepId: "0928-step-03",
+      stepStates: { "0928-step-01": { done: true }, "bogus-step": { done: true }, "0928-step-02": { done: "yes" } },
+      startedAt: "2026-09-28T00:00:00.000Z" } }
+  } };
+  await page.locator("#import-file").setInputFiles({ name: "v5.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(validBackup)) });
+  await expect(page.locator(".execution-current")).toContainText("续走10号线");
+  stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(stored.executions["0928"].stepStates).toEqual({ "0928-step-01": { done: true } });
+  expect(stored.executions["0928"].activeStepId).toBe("0928-step-03");
+  await page.getByRole("button", { name: "更多" }).click();
+  await page.locator("#recovery-button").click();
+  stored = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(stored.notes).toBe("旧版备注");
+  expect(stored.executions["0927"].stepStates["0927-step-01"]).toEqual({ done: true });
+  await context.close();
+});
+
+test("focused layout remains readable at phone, tablet and desktop sizes and print stays intact", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.clock.install({ time: new Date("2026-09-27T00:00:00Z") });
+  await page.goto(url);
+  await page.locator('#view-today [data-day="0927"]').click();
+  await page.locator("[data-start-execution='0927']").click();
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await expect(page.locator(".execution-current")).toBeVisible();
+    await expect(page.locator(".execution-stamp")).toBeVisible();
+    await expect(page.locator(".execution-statusbar")).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    const controls = await page.locator(".execution-controls button, .execution-location button, .execution-stamp-check, .execution-datebar button, .execution-timeline summary").evaluateAll(elements => elements.map(element => Math.round(element.getBoundingClientRect().height)));
+    expect(controls.every(height => height >= 44)).toBe(true);
+    await page.screenshot({ path: `test-results/execution-${width}.png` });
+  }
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator("#view-plan")).toBeVisible();
+  await expect(page.locator("#plan-content .route-stamps")).toHaveCount(2);
+  expect(errors).toEqual([]);
+});
+
+test("GitHub Pages subdirectory keeps install scope and offline walk-mode state", async ({ browser }) => {
+  const server = await startStaticServer(4184, "/jeju-olle-100km-plan");
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  const subpathUrl = "http://127.0.0.1:4184/jeju-olle-100km-plan/";
+  try {
+    await page.goto(subpathUrl);
+    await waitForAppWorker(page);
+    const config = await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const manifest = await (await fetch(document.querySelector('link[rel="manifest"]').href)).json();
+      return { scope: registration.scope, start: new URL(manifest.start_url, document.querySelector('link[rel="manifest"]').href).href, caches: await caches.keys() };
+    });
+    expect(config.scope).toBe(subpathUrl);
+    expect(config.start).toBe(subpathUrl);
+    expect(config.caches).toContain("jeju-olle-app-v5-execution-20260915-9");
+    await page.locator('#view-today [data-day="0924"]').click();
+    await page.locator("[data-start-execution='0924']").click();
+    await context.setOffline(true);
+    await page.reload();
+    await expect(page.locator(".execution-current")).toContainText("退房，步行前往济州客运站");
+    await expect(page.locator("#network-status")).toContainText("离线可用");
+  } finally {
+    await context.close();
+    await closeServer(server);
+  }
 });
