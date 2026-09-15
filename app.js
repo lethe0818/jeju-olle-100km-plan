@@ -5,6 +5,16 @@
   const STORAGE_KEY = "jeju-olle-plan-v4";
   const LEGACY_STORAGE_KEY = "jeju-olle-plan-v3";
   const RECOVERY_KEY = "jeju-olle-plan-v4-recovery";
+  const WEATHER_CACHE_KEY = "jeju-olle-weather-v1";
+  const WEATHER_REFRESH_MS = 25 * 60 * 1000;
+  const WEATHER_REGIONS = {
+    "0923": { name: "济州机场", place: "airport" },
+    "0924": { name: "城山 · 牛岛", place: "seongsanPort" },
+    "0925": { name: "南元 · 西归浦", place: "namwon" },
+    "0926": { name: "西归浦", place: "traveler" },
+    "0927": { name: "和顺 · 摹瑟浦", place: "hwasun" },
+    "0928": { name: "摹瑟浦 · 加波岛", place: "unjin" }
+  };
   const ALLOWED_VIEWS = ["today", "plan", "checkins", "more"];
   const ALLOWED_MODES = ["步行", "公交", "打车", "骑行"];
   const DAY_IDS = data.days.map(function (day) { return day.id; });
@@ -29,6 +39,9 @@
   let toastTimer = null;
   let printRestore = null;
   const openRouteDetails = new Set();
+  const weatherCache = loadWeatherCache();
+  const weatherPending = new Set();
+  const weatherErrors = {};
 
   function initialDayId() {
     const now = new Date();
@@ -181,6 +194,132 @@
 
   function saveState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function loadWeatherCache() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY));
+      if (!raw || raw.version !== 1 || !raw.days || typeof raw.days !== "object") return {};
+      return Object.fromEntries(DAY_IDS.filter(function (id) {
+        const item = raw.days[id];
+        return item && Number.isFinite(item.fetchedAt) && item.fetchedAt > 0 && item.forecast && typeof item.forecast === "object";
+      }).map(function (id) { return [id, raw.days[id]]; }));
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function seoulDateKey() {
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+    const values = Object.fromEntries(parts.map(function (part) { return [part.type, part.value]; }));
+    return values.year + "-" + values.month + "-" + values.day;
+  }
+
+  function weatherDateKey(dayId) {
+    return "2026-" + dayId.slice(0, 2) + "-" + dayId.slice(2);
+  }
+
+  function weatherDayOffset(dayId) {
+    return Math.round((Date.parse(weatherDateKey(dayId) + "T00:00:00Z") - Date.parse(seoulDateKey() + "T00:00:00Z")) / 86400000);
+  }
+
+  function weatherDescription(code) {
+    if (!Number.isFinite(code)) return "天气预报";
+    if (code === 0) return "晴";
+    if (code <= 2) return "晴间多云";
+    if (code === 3) return "阴";
+    if (code === 45 || code === 48) return "有雾";
+    if (code >= 51 && code <= 67) return "有雨";
+    if (code >= 71 && code <= 77) return "有雪";
+    if (code >= 80 && code <= 82) return "阵雨";
+    if (code >= 85 && code <= 86) return "阵雪";
+    if (code >= 95) return "雷雨";
+    return "天气预报";
+  }
+
+  function weatherNumber(value, suffix) {
+    return Number.isFinite(value) ? Math.round(value) + suffix : "--";
+  }
+
+  function weatherUpdatedAt(timestamp) {
+    return new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(timestamp));
+  }
+
+  function renderWeather() {
+    const panel = document.getElementById("weather-panel");
+    if (!panel) return;
+    const dayId = state.activeDay;
+    const cached = weatherCache[dayId];
+    const content = panel.querySelector(".weather-content");
+    const offset = weatherDayOffset(dayId);
+    const loading = weatherPending.has(dayId);
+    panel.querySelector("[data-refresh-weather]").disabled = loading;
+    let message = "";
+    if (offset < 0) message = "日期已过，不显示过期预报";
+    else if (offset > 15) message = "尚未进入 16 天预报范围";
+    else if (!cached) message = loading ? "正在获取沿途天气…" : (navigator.onLine ? (weatherErrors[dayId] ? "天气更新失败，请稍后重试" : "等待天气数据") : "离线中，暂无上次天气数据");
+    if (message) {
+      content.innerHTML = '<p class="weather-empty">' + message + '</p>';
+    } else {
+      const forecast = cached.forecast;
+      const current = offset === 0 && Number.isFinite(forecast.currentTemp);
+      content.innerHTML = '<div class="weather-condition">' + htmlEscape(weatherDescription(current ? forecast.currentCode : forecast.code)) + ' · ' + (current ? "当前天气为模型估计" : "当天预报") + '</div>' +
+        '<div class="weather-readings"><div class="weather-reading"><span>' + (current ? "当前气温" : "预计最高") + '</span><strong>' + weatherNumber(current ? forecast.currentTemp : forecast.high, "°") + '</strong><small>高 ' + weatherNumber(forecast.high, "°") + ' / 低 ' + weatherNumber(forecast.low, "°") + '</small></div>' +
+        '<div class="weather-reading"><span>降雨概率</span><strong>' + weatherNumber(forecast.rain, "%") + '</strong><small>当天最高</small></div>' +
+        '<div class="weather-reading"><span>最大阵风</span><strong>' + weatherNumber(forecast.gust, "") + '<em>km/h</em></strong><small>' + (current && Number.isFinite(forecast.currentWind) ? "当前风速 " + weatherNumber(forecast.currentWind, " km/h") : "当天预报") + '</small></div></div>';
+    }
+    const status = offset < 0 || offset > 15 ? "" : loading ? "更新中" : !navigator.onLine ? (cached ? "离线 · 上次更新" : "离线") : weatherErrors[dayId] ? (cached ? "更新失败 · 上次更新" : "更新失败") : cached ? "更新于" : "";
+    content.innerHTML += '<div class="weather-meta"><span>' + (cached && status ? status + " " + htmlEscape(weatherUpdatedAt(cached.fetchedAt)) : status) + '</span><a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener">Open-Meteo</a></div>' +
+      ((dayId === "0924" || dayId === "0928") ? '<p class="weather-ferry-note">船班运行仍以码头公告为准</p>' : "");
+  }
+
+  function refreshWeather(force) {
+    if (state.activeView !== "today" && !force) return;
+    const dayId = state.activeDay;
+    const offset = weatherDayOffset(dayId);
+    const cached = weatherCache[dayId];
+    if (offset < 0 || offset > 15 || weatherPending.has(dayId) || !navigator.onLine || (!force && cached && Date.now() - cached.fetchedAt < WEATHER_REFRESH_MS)) {
+      renderWeather();
+      return;
+    }
+    const place = data.places[WEATHER_REGIONS[dayId].place];
+    const params = new URLSearchParams({
+      latitude: place.lat, longitude: place.lng,
+      current: "temperature_2m,wind_speed_10m,weather_code",
+      daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_gusts_10m_max",
+      timezone: "Asia/Seoul", forecast_days: "16"
+    });
+    const controller = new AbortController();
+    const timeout = window.setTimeout(function () { controller.abort(); }, 10000);
+    weatherPending.add(dayId);
+    delete weatherErrors[dayId];
+    renderWeather();
+    fetch("https://api.open-meteo.com/v1/forecast?" + params, { cache: "no-store", signal: controller.signal }).then(function (response) {
+      if (!response.ok) throw new Error("Weather service unavailable");
+      return response.json();
+    }).then(function (payload) {
+      const daily = payload.daily;
+      const index = daily && Array.isArray(daily.time) ? daily.time.indexOf(weatherDateKey(dayId)) : -1;
+      if (index < 0) throw new Error("Forecast date unavailable");
+      const numberOrNull = function (value) { return Number.isFinite(value) ? value : null; };
+      weatherCache[dayId] = { fetchedAt: Date.now(), forecast: {
+        code: numberOrNull(daily.weather_code[index]),
+        high: numberOrNull(daily.temperature_2m_max[index]),
+        low: numberOrNull(daily.temperature_2m_min[index]),
+        rain: numberOrNull(daily.precipitation_probability_max[index]),
+        gust: numberOrNull(daily.wind_gusts_10m_max[index]),
+        currentTemp: offset === 0 && payload.current && payload.current.time && payload.current.time.startsWith(weatherDateKey(dayId)) ? numberOrNull(payload.current.temperature_2m) : null,
+        currentCode: offset === 0 && payload.current ? numberOrNull(payload.current.weather_code) : null,
+        currentWind: offset === 0 && payload.current ? numberOrNull(payload.current.wind_speed_10m) : null
+      } };
+      try { localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({ version: 1, days: weatherCache })); } catch (error) { /* Keep the weather visible without persistent storage. */ }
+    }).catch(function () {
+      weatherErrors[dayId] = true;
+    }).finally(function () {
+      window.clearTimeout(timeout);
+      weatherPending.delete(dayId);
+      if (state.activeDay === dayId) renderWeather();
+    });
   }
 
   function createId() {
@@ -456,6 +595,7 @@
       '<div class="day-title-row"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + '</h2><p>' + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK") + "</small></div></div>" +
       '<div class="today-grid"><div class="today-primary">' +
         renderNextCard(day) +
+        '<section class="weather-strip" id="weather-panel" aria-label="所选日期沿途天气"><div class="weather-top"><div class="weather-heading"><span>沿途天气</span><strong>' + htmlEscape(WEATHER_REGIONS[day.id].name) + '</strong></div><button class="weather-refresh" type="button" data-refresh-weather aria-label="刷新沿途天气" title="刷新沿途天气">' + icon("refresh-cw.svg") + '</button></div><div class="weather-content" aria-live="polite"></div></section>' +
         renderRouteTeaser(day) +
         renderQuickTimeline(day) +
         (day.cutoff ? '<section class="cutoff-card"><strong>硬截止 · ' + htmlEscape(day.cutoff) + "</strong><p>" + htmlEscape(day.fallback) + '</p><label class="fallback-toggle"><input type="checkbox" data-fallback="' + day.id + '" ' + (state.fallbacks[day.id] ? "checked" : "") + '><span>' + (state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案") + "</span></label></section>" : "") +
@@ -644,6 +784,8 @@
     renderCheckins();
     renderMore();
     updateNetworkStatus();
+    renderWeather();
+    refreshWeather(false);
   }
 
   function switchView(viewName, preserveScroll) {
@@ -1145,6 +1287,10 @@
       else openRouteDetails.delete(key);
     }, true);
     document.addEventListener("click", function (event) {
+      if (event.target.closest("[data-refresh-weather]")) {
+        refreshWeather(true);
+        return;
+      }
       const mapLink = event.target.closest("[data-map-app]");
       if (mapLink) {
         openMapApp(event, mapLink);
@@ -1339,8 +1485,14 @@
     document.getElementById("checkin-map-input").addEventListener("blur", function () {
       if (this.value.trim()) parseLocationIntoForm();
     });
-    window.addEventListener("online", updateNetworkStatus);
-    window.addEventListener("offline", updateNetworkStatus);
+    window.addEventListener("online", function () { updateNetworkStatus(); refreshWeather(false); });
+    window.addEventListener("offline", function () { updateNetworkStatus(); renderWeather(); });
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) refreshWeather(false);
+    });
+    window.setInterval(function () {
+      if (!document.hidden) refreshWeather(false);
+    }, WEATHER_REFRESH_MS);
   }
 
   function configurePrint() {

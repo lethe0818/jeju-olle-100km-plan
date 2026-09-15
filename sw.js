@@ -1,4 +1,4 @@
-const CACHE_NAME = "jeju-olle-app-v4-white-next-map-buttons-20260915-7";
+const CACHE_NAME = "jeju-olle-app-v4-live-weather-20260915-8";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -42,6 +42,7 @@ const APP_SHELL = [
   "./assets/icons/utensils.svg",
   "./assets/icons/wallet-cards.svg",
   "./assets/icons/receipt-text.svg",
+  "./assets/icons/refresh-cw.svg",
   "./assets/icons/x.svg"
 ];
 

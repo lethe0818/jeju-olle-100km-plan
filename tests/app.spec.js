@@ -35,6 +35,86 @@ async function waitForAppWorker(page) {
 test.beforeAll(async () => { testServer = await startStaticServer(4183); });
 test.afterAll(async () => { await closeServer(testServer); });
 
+test("weather follows the walking region, refreshes, and survives offline or failed requests", async ({ page, context }) => {
+  const errors = [];
+  const requests = [];
+  let failWeather = false;
+  const days = ["2026-09-23", "2026-09-24", "2026-09-25", "2026-09-26", "2026-09-27", "2026-09-28"];
+  const forecast = {
+    daily: {
+      time: days, weather_code: [2, 3, 61, 0, 80, 1],
+      temperature_2m_max: [25, 27.4, 24, 26, 23, 28], temperature_2m_min: [18, 19.3, 17, 19, 16, 20],
+      precipitation_probability_max: [10, 45, 80, 0, 70, 20], wind_gusts_10m_max: [30, 48.2, 44, 18, 53, 22]
+    },
+    current: { time: "2026-09-24T09:00", temperature_2m: 21.6, weather_code: 2, wind_speed_10m: 17.3 }
+  };
+  page.on("pageerror", error => errors.push(error.message));
+  await page.clock.install({ time: new Date("2026-09-24T00:00:00Z") });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("https://api.open-meteo.com/v1/forecast?**", async route => {
+    requests.push(new URL(route.request().url()));
+    if (failWeather) await route.abort();
+    else await route.fulfill({ contentType: "application/json", body: JSON.stringify(forecast) });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url);
+  const weather = page.locator("#weather-panel");
+  await expect(weather).toContainText("城山 · 牛岛");
+  await expect(weather).toContainText("当前气温");
+  await expect(weather).toContainText("22°");
+  await expect(weather).toContainText("晴间多云 · 当前天气为模型估计");
+  await expect(weather).toContainText("45%");
+  await expect(weather).toContainText("48km/h");
+  await expect(weather).toContainText("当前风速 17 km/h");
+  expect(requests[0].searchParams.get("latitude")).toBe("33.4719127");
+  expect(requests[0].searchParams.get("timezone")).toBe("Asia/Seoul");
+  await page.screenshot({ path: "test-results/weather-today-390.png" });
+  for (const width of [768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await page.screenshot({ path: `test-results/weather-today-${width}.png` });
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  const beforeAutoRefresh = requests.length;
+  await page.clock.fastForward(25 * 60 * 1000);
+  await expect.poll(() => requests.length).toBe(beforeAutoRefresh + 1);
+  await page.locator('#view-today [data-day="0925"]').click();
+  await expect(weather).toContainText("南元 · 西归浦");
+  await expect(weather).toContainText("预计最高");
+  await expect(weather).toContainText("80%");
+  expect(requests.at(-1).searchParams.get("latitude")).toBe("33.2778081");
+  const beforeRefresh = requests.length;
+  await weather.locator("[data-refresh-weather]").click();
+  await expect.poll(() => requests.length).toBe(beforeRefresh + 1);
+  await waitForAppWorker(page);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(weather).toContainText("离线 · 上次更新");
+  await expect(weather).toContainText("80%");
+  await weather.locator("[data-refresh-weather]").click();
+  await expect(weather).toContainText("80%");
+  await context.setOffline(false);
+  failWeather = true;
+  await weather.locator("[data-refresh-weather]").click();
+  await expect(weather).toContainText("更新失败 · 上次更新");
+  await expect(weather).toContainText("80%");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  expect(errors).toEqual([]);
+});
+
+test("weather outside the 16-day horizon stays explicitly unavailable", async ({ page }) => {
+  const weatherRequests = [];
+  await page.clock.install({ time: new Date("2026-09-10T00:00:00Z") });
+  await page.route("https://api.open-meteo.com/v1/forecast?**", route => {
+    weatherRequests.push(route.request().url());
+    return route.abort();
+  });
+  await page.goto(url);
+  await page.locator('#view-today [data-day="0928"]').click();
+  await expect(page.locator("#weather-panel")).toContainText("尚未进入 16 天预报范围");
+  expect(weatherRequests.some(url => new URL(url).searchParams.get("latitude") === "33.2096928")).toBe(false);
+});
+
 test("next-action map buttons are white and legible on mobile and desktop", async ({ page }) => {
   await page.goto(url);
   await page.locator('#view-today [data-day="0924"]').click();
