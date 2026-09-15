@@ -29,14 +29,16 @@
   };
   const EXPENSE_PAYMENTS = { card: "银行卡", cash: "现金", alipay: "支付宝", wechat: "微信", other: "其他" };
   const EXPENSE_CURRENCIES = ["KRW", "CNY"];
-  const filterState = { day: "all", category: "all" };
+  const filterState = { day: "all", category: "all", query: "" };
   let expenseDayFilter = "all";
   let state = loadState();
+  filterState.day = state.activeDay;
   let deferredInstallPrompt = null;
   let waitingWorker = null;
   let updateReloadRequested = false;
   let deletedCheckin = null;
   let deletedExpense = null;
+  let lastStampAction = null;
   let toastTimer = null;
   let printRestore = null;
   let executionLocation = null;
@@ -44,6 +46,8 @@
   let executionLocationPending = false;
   let executionLocationRequestId = 0;
   let executionTimelineOpen = false;
+  let executionRiskOpen = false;
+  let completedCheckinsOpen = false;
   const openRouteDetails = new Set();
   const weatherCache = loadWeatherCache();
   const weatherPending = new Set();
@@ -648,6 +652,18 @@
     return Object.assign({ tone: deltaMinutes <= 60 ? "warning" : "normal", countdown }, selected);
   }
 
+  function cutoffDisplay(day, cutoff) {
+    if (!cutoff) return "无";
+    if (cutoff.tone === "preview") return Number(day.id.slice(0, 2)) + "/" + Number(day.id.slice(2)) + " " + cutoff.time;
+    return cutoff.time + " · " + cutoff.countdown;
+  }
+
+  function hasHighWeatherRisk(dayId) {
+    const cached = weatherCache[dayId];
+    const forecast = cached && cached.forecast;
+    return Boolean(forecast && (Number(forecast.rain) >= 60 || Number(forecast.gust) >= 45));
+  }
+
   function startExecution(dayId) {
     if (state.activeDay !== dayId) clearExecutionLocation();
     const day = dayById(dayId);
@@ -720,13 +736,58 @@
   }
 
   function chooseSuggestedStep(dayId, stepId) {
+    chooseExecutionStep(dayId, stepId, "已定位到计划建议步骤，未改动完成状态");
+  }
+
+  function chooseExecutionStep(dayId, stepId, message) {
     const day = dayById(dayId);
-    if (!day.timeline.some(function (item) { return item.id === stepId; })) return;
+    const item = day.timeline.find(function (entry) { return entry.id === stepId; });
+    if (!item) return;
     const execution = executionForDay(dayId, true);
+    if (isStepDone(execution, stepId)) {
+      showToast("该步骤已经完成");
+      return;
+    }
     execution.activeStepId = stepId;
     saveState();
     renderAll();
-    showToast("已定位到计划建议步骤，未改动完成状态");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    showToast(message || "已设为当前步骤，未改动其他进度");
+  }
+
+  function stampActionContext(key) {
+    const labels = { start: "起点章", middle: "中间章", end: "终点章" };
+    for (const day of data.days) {
+      const plans = day.stampPlan || day.routeIds.map(function (routeId) {
+        return { routeId, stamps: data.routes[routeId].stamps || ["start", "middle", "end"] };
+      });
+      for (const plan of plans) {
+        for (const stamp of plan.stamps) {
+          if (plan.routeId + "-" + stamp !== key) continue;
+          const step = day.timeline.find(function (item) { return (item.completionStamps || []).includes(key); });
+          return { dayId: day.id, stepId: step ? step.id : "", label: plan.routeId + "号线" + labels[stamp] };
+        }
+      }
+    }
+    return { dayId: "", stepId: "", label: "章点" };
+  }
+
+  function undoStamp() {
+    if (!lastStampAction) return;
+    const action = lastStampAction;
+    lastStampAction = null;
+    state.stamps[action.key] = false;
+    if (action.dayId) {
+      const day = dayById(action.dayId);
+      const execution = state.executions[action.dayId];
+      if (execution) {
+        syncExecutionFromStamps(day, execution);
+        if (action.autoAdvanced && execution.status === "active" && action.stepId && !isStepDone(execution, action.stepId)) execution.activeStepId = action.stepId;
+      }
+    }
+    saveState();
+    renderAll();
+    showToast("已撤销“" + action.label + "”");
   }
 
   function clearExecutionLocation() {
@@ -838,23 +899,27 @@
     }).join("");
   }
 
-  function renderNextCard(day) {
+  function renderTodayAction(day, execution) {
+    const done = day.timeline.filter(function (item) { return isStepDone(execution, item.id); }).length;
+    const dayStamps = stampsForDay(day);
+    const checkedStamps = dayStamps.filter(function (key) { return state.stamps[key]; }).length;
+    const cutoff = cutoffStatus(day);
+    const km = completedKm();
+    if (execution.status === "finished") {
+      return '<section class="today-action-card finished"><div class="today-action-finished"><div><span class="execution-kicker">DAY CLOSED</span><h3>今日执行已结束</h3><p>完成 ' + done + " / " + day.timeline.length + ' 个步骤，进度和章点均已保存。</p></div><button class="primary-button" type="button" data-reopen-execution="' + day.id + '">重新打开</button></div>' + renderTodayActionMetrics(day, cutoff, checkedStamps, dayStamps.length, km) + "</section>";
+    }
     const place = data.places[day.next.place];
-    return '<section class="next-card"><div class="next-card-top"><div><span class="next-label">NEXT ACTION</span><time>' + htmlEscape(day.next.time) + '</time></div><span class="mode-badge">' + htmlEscape(day.next.mode) + '</span></div><h3>' + htmlEscape(day.next.title) + "</h3><p>" + htmlEscape(day.next.detail) + "</p>" + (place ? mapLinks(place, day.next.mode) : "") + "</section>";
+    return '<section class="today-action-card"><div class="today-action-top"><div><span class="next-label">WALK MODE · NEXT ACTION</span><time>' + htmlEscape(day.next.time) + '</time></div><span class="mode-badge">' + htmlEscape(day.next.mode) + '</span></div><div class="today-action-heading"><div><h3>' + htmlEscape(day.next.title) + '</h3><p>' + htmlEscape(day.next.detail) + '</p></div><button class="today-start-button" type="button" data-start-execution="' + day.id + '">' + icon("navigation.svg") + (done ? "继续此日" : "开始此日") + "</button></div>" + (place ? mapLinks(place, day.next.mode) : "") + renderTodayActionMetrics(day, cutoff, checkedStamps, dayStamps.length, km) + "</section>";
   }
 
-  function renderExecutionLauncher(day, execution) {
-    const done = day.timeline.filter(function (item) { return isStepDone(execution, item.id); }).length;
-    if (execution.status === "finished") {
-      return '<section class="execution-launcher finished"><div><span class="execution-kicker">DAY CLOSED</span><h3>今日执行已结束</h3><p>完成 ' + done + " / " + day.timeline.length + ' 个步骤，进度和章点均已保存。</p></div><button class="primary-button" type="button" data-reopen-execution="' + day.id + '">重新打开</button></section>';
-    }
-    return '<section class="execution-launcher"><div><span class="execution-kicker">WALK MODE</span><h3>' + (done ? "继续今天的执行" : "准备出发") + '</h3><p>' + day.timeline.length + " 个节点 · " + stampsForDay(day).length + " 枚章 · " + (day.cutoffs || []).length + ' 条截止</p></div><button class="primary-button" type="button" data-start-execution="' + day.id + '">' + icon("navigation.svg") + (done ? "继续此日" : "开始此日") + "</button></section>";
+  function renderTodayActionMetrics(day, cutoff, checkedStamps, totalStamps, km) {
+    return '<div class="today-action-metrics"><div class="' + (cutoff ? cutoff.tone : "normal") + '"><span>最近截止</span><strong>' + htmlEscape(cutoffDisplay(day, cutoff)) + '</strong></div><div><span>当天盖章</span><strong>' + checkedStamps + " / " + totalStamps + '</strong></div><div><span>认证进度</span><strong>' + km.toFixed(1) + " km</strong></div></div>";
   }
 
   function renderExecutionCutoff(day) {
     const cutoff = cutoffStatus(day);
     if (!cutoff) return "";
-    return '<section class="execution-cutoff ' + cutoff.tone + '" data-cutoff-id="' + cutoff.id + '"><div><span>硬截止 · ' + htmlEscape(cutoff.time) + '</span><strong>' + htmlEscape(cutoff.title) + '</strong></div><b>' + htmlEscape(cutoff.countdown) + '</b><p>' + htmlEscape(cutoff.action) + "</p></section>";
+    return '<section class="execution-cutoff ' + cutoff.tone + '" data-cutoff-id="' + cutoff.id + '"><div><span>硬截止' + (cutoff.tone === "preview" ? "" : " · " + htmlEscape(cutoff.time)) + '</span><strong>' + htmlEscape(cutoff.title) + '</strong></div><b>' + htmlEscape(cutoff.tone === "preview" ? cutoffDisplay(day, cutoff) : cutoff.countdown) + '</b><p>' + htmlEscape(cutoff.action) + "</p></section>";
   }
 
   function renderExecutionStatus(day) {
@@ -862,7 +927,7 @@
     const cached = weatherCache[day.id];
     const forecast = cached && cached.forecast;
     const weather = forecast ? weatherDescription(forecast.code) + " · 雨 " + weatherNumber(forecast.rain, "%") + " · 风 " + weatherNumber(forecast.gust, " km/h") : "天气待更新";
-    return '<div class="execution-statusbar"><div class="' + (cutoff ? cutoff.tone : "normal") + '"><span>硬截止</span><strong>' + (cutoff ? htmlEscape(cutoff.time + " · " + cutoff.countdown) : "无") + '</strong></div><div><span>沿途天气</span><strong>' + htmlEscape(weather) + '</strong></div></div>';
+    return '<div class="execution-statusbar"><div class="' + (cutoff ? cutoff.tone : "normal") + '"><span>硬截止</span><strong>' + htmlEscape(cutoffDisplay(day, cutoff)) + '</strong></div><div class="' + (hasHighWeatherRisk(day.id) ? "warning" : "normal") + '"><span>沿途天气</span><strong>' + htmlEscape(weather) + '</strong></div></div>';
   }
 
   function renderExecutionStamp(day) {
@@ -900,13 +965,20 @@
     return '<details class="execution-timeline" data-execution-timeline ' + (executionTimelineOpen ? "open" : "") + '><summary><span>' + icon("calendar-days.svg") + '完整时间轴</span><small>' + done + " / " + day.timeline.length + " 已完成 " + icon("chevron-down.svg") + '</small></summary><div class="execution-timeline-list">' + day.timeline.map(function (item) {
       const itemDone = isStepDone(execution, item.id);
       const active = item.id === execution.activeStepId;
-      return '<article class="execution-timeline-item ' + (itemDone ? "done" : "") + (active ? " active" : "") + '"><time>' + htmlEscape(item.time) + '</time><div><h3>' + htmlEscape(item.title) + '</h3><p>' + htmlEscape(item.detail) + '</p></div><span>' + (itemDone ? icon("check.svg") : "") + "</span></article>";
+      return '<article class="execution-timeline-item ' + (itemDone ? "done" : "") + (active ? " active" : "") + '"><time>' + htmlEscape(item.time) + '</time><div><h3>' + htmlEscape(item.title) + '</h3><p>' + htmlEscape(item.detail) + '</p></div>' + (itemDone ? '<span class="timeline-state">' + icon("check.svg") + '</span>' : active ? '<span class="timeline-state current">当前</span>' : '<button class="timeline-select" type="button" data-select-execution-step="' + htmlEscape(item.id) + '" data-execution-day="' + day.id + '">设为当前</button>') + "</article>";
     }).join("") + "</div></details>";
+  }
+
+  function renderExecutionRiskDetails(day) {
+    const cutoff = cutoffStatus(day);
+    const autoOpen = Boolean(cutoff && ["warning", "overdue"].includes(cutoff.tone)) || hasHighWeatherRisk(day.id);
+    const summary = autoOpen ? "需要立即留意" : "按需查看";
+    return '<details class="execution-risk-details" ' + (autoOpen || executionRiskOpen ? "open" : "") + '><summary><span>' + icon("award.svg") + '截止与天气详情</span><small>' + summary + " " + icon("chevron-down.svg") + '</small></summary><div class="execution-risk-content">' + renderExecutionCutoff(day) + '<section class="weather-strip execution-weather" id="weather-panel" aria-label="沿途天气风险"><div class="weather-top"><div class="weather-heading"><span>天气风险</span><strong>' + htmlEscape(WEATHER_REGIONS[day.id].name) + '</strong></div><button class="weather-refresh" type="button" data-refresh-weather aria-label="刷新沿途天气" title="刷新沿途天气">' + icon("refresh-cw.svg") + '</button></div><div class="weather-content" aria-live="polite"></div></section></div></details>';
   }
 
   function renderExecutionToday(day, execution) {
     syncExecutionFromStamps(day, execution);
-    return '<div class="execution-shell"><header class="execution-datebar"><div><span>' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</span><h1 id="execution-title">' + htmlEscape(day.label) + '</h1></div><button type="button" data-finish-execution="' + day.id + '">结束今日</button></header>' + renderExecutionStatus(day) + '<div class="execution-grid"><main>' + renderExecutionCurrent(day, execution) + renderExecutionStamp(day) + '</main><aside>' + renderExecutionCutoff(day) + '<section class="weather-strip execution-weather" id="weather-panel" aria-label="沿途天气风险"><div class="weather-top"><div class="weather-heading"><span>天气风险</span><strong>' + htmlEscape(WEATHER_REGIONS[day.id].name) + '</strong></div><button class="weather-refresh" type="button" data-refresh-weather aria-label="刷新沿途天气" title="刷新沿途天气">' + icon("refresh-cw.svg") + '</button></div><div class="weather-content" aria-live="polite"></div></section></aside></div>' + renderExecutionTimeline(day, execution) + (state.fallbacks[day.id] ? '<section class="execution-fallback"><strong>备选方案已启用</strong><p>' + htmlEscape(day.fallback) + '</p></section>' : "") + "</div>";
+    return '<div class="execution-shell"><header class="execution-datebar"><div><span>' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</span><h1 id="execution-title">' + htmlEscape(day.label) + '</h1></div><button type="button" data-finish-execution="' + day.id + '">结束今日</button></header>' + renderExecutionStatus(day) + '<div class="execution-grid"><main>' + renderExecutionCurrent(day, execution) + renderExecutionStamp(day) + '</main><aside>' + renderExecutionRiskDetails(day) + '</aside></div>' + renderExecutionTimeline(day, execution) + (state.fallbacks[day.id] ? '<section class="execution-fallback"><strong>备选方案已启用</strong><p>' + htmlEscape(day.fallback) + '</p></section>' : "") + "</div>";
   }
 
   function renderQuickTimeline(day) {
@@ -988,9 +1060,8 @@
 
     document.getElementById("today-content").innerHTML =
       '<div class="day-title-row"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + '</h2><p>' + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK") + "</small></div></div>" +
-      renderExecutionLauncher(day, execution) +
+      renderTodayAction(day, execution) +
       '<div class="today-grid"><div class="today-primary">' +
-        renderNextCard(day) +
         '<section class="weather-strip" id="weather-panel" aria-label="所选日期沿途天气"><div class="weather-top"><div class="weather-heading"><span>沿途天气</span><strong>' + htmlEscape(WEATHER_REGIONS[day.id].name) + '</strong></div><button class="weather-refresh" type="button" data-refresh-weather aria-label="刷新沿途天气" title="刷新沿途天气">' + icon("refresh-cw.svg") + '</button></div><div class="weather-content" aria-live="polite"></div></section>' +
         renderRouteTeaser(day) +
         renderQuickTimeline(day) +
@@ -1036,16 +1107,31 @@
     }).join("") + "</div>";
   }
 
+  function renderPlanSectionNav(day, dayCheckins, hotel, printMode) {
+    if (printMode) return "";
+    const execution = executionForDay(day.id, false);
+    const hasStamps = Boolean((day.stampPlan && day.stampPlan.length) || day.routeIds.length);
+    const links = [
+      { id: "time", label: "时间", icon: "calendar-days.svg", show: true },
+      { id: "stamps", label: "章点", icon: "award.svg", show: hasStamps },
+      { id: "checkins", label: "打卡", icon: "map-pin-check.svg", show: dayCheckins.length > 0 },
+      { id: "stay", label: hotel ? "住宿备注" : "当天备注", icon: hotel ? "house.svg" : "notebook-pen.svg", show: true }
+    ].filter(function (item) { return item.show; });
+    return '<nav class="plan-section-nav" aria-label="计划章节">' + links.map(function (item) {
+      return '<button type="button" data-plan-section="plan-' + item.id + "-" + day.id + '">' + icon(item.icon) + htmlEscape(item.label) + "</button>";
+    }).join("") + (execution.status === "active" ? '<button class="plan-current-step" type="button" data-view-target="today">' + icon("navigation.svg") + "返回当前</button>" : "") + "</nav>";
+  }
+
   function renderPlanDay(day, printMode) {
     const totalDistance = day.walkKm + (day.bikeKm || 0);
     const hotel = day.hotel ? data.places[day.hotel] : null;
     const dayCheckins = checkinsForDay(day.id).filter(function (item) { return !item.routeHighlight; });
-    return '<article class="' + (printMode ? "print-day" : "plan-day") + '"><header class="plan-day-header"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + "</h2><p>" + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? "WALK + BIKE" : "KM WALK") + "</small></div></header>" +
-      '<div class="plan-layout"><div>' + renderRouteGuides(day, printMode) + renderTimeline(day) +
+    return '<article class="' + (printMode ? "print-day" : "plan-day") + '"><header class="plan-day-header"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + "</h2><p>" + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? "WALK + BIKE" : "KM WALK") + "</small></div></header>" + renderPlanSectionNav(day, dayCheckins, hotel, printMode) +
+      '<div class="plan-layout"><div>' + renderRouteGuides(day, printMode) + '<section id="plan-time-' + day.id + '" class="plan-anchor-section" tabindex="-1">' + renderTimeline(day) +
       (day.cutoff ? '<section class="cutoff-card"><strong>硬截止 · ' + htmlEscape(day.cutoff) + "</strong><p>" + htmlEscape(day.fallback) + '</p><label class="fallback-toggle"><input type="checkbox" data-fallback="' + day.id + '" ' + (state.fallbacks[day.id] ? "checked" : "") + '><span>' + (state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案") + "</span></label></section>" : "") +
-      renderStamps(day) +
-      (dayCheckins.length ? '<div class="section-heading"><h2>当天打卡点</h2><span>' + dayCheckins.length + ' 个</span></div><div class="checkin-list">' + dayCheckins.map(renderCheckinCard).join("") + "</div>" : "") +
-      '</div><aside class="plan-side">' +
+      '</section><section id="plan-stamps-' + day.id + '" class="plan-anchor-section" tabindex="-1">' + renderStamps(day) + "</section>" +
+      (dayCheckins.length ? '<section id="plan-checkins-' + day.id + '" class="plan-anchor-section" tabindex="-1"><div class="section-heading"><h2>当天打卡点</h2><span>' + dayCheckins.length + ' 个</span></div><div class="checkin-list">' + dayCheckins.map(renderCheckinCard).join("") + "</div></section>" : "") +
+      '</div><aside id="plan-stay-' + day.id + '" class="plan-side plan-anchor-section" tabindex="-1">' +
       '<section class="status-panel"><div class="status-panel-head"><h3>出发前确认</h3><span>' + confirmationsForDay(day.id).filter(function (item) { return state.confirmations[item.id]; }).length + "/" + confirmationsForDay(day.id).length + "</span></div>" + renderConfirmationRows(confirmationsForDay(day.id)) + "</section>" +
       (hotel ? '<div class="section-heading"><h2>今晚住宿</h2></div><section class="hotel-card"><h3>' + htmlEscape(hotel.name) + "</h3><p><b>" + htmlEscape(hotel.korean) + "</b> · " + htmlEscape(hotel.address) + "</p>" + mapLinks(hotel, "步行") + "</section>" : "") +
       '<div class="section-heading"><h2>当天备注</h2><span>自动保存</span></div><textarea class="day-notes" data-day-note="' + day.id + '" rows="5" placeholder="记录天气、班次、身体状态和临时变更……">' + htmlEscape(state.dayNotes[day.id] || "") + "</textarea></aside></div></article>";
@@ -1085,18 +1171,43 @@
     }).join("");
   }
 
+  function checkinPriorityRank(priority) {
+    const value = String(priority || "");
+    if (value.includes("必") || value.includes("首选")) return 0;
+    if (value.includes("想去") || value.includes("顺路")) return 1;
+    if (value.includes("备选")) return 3;
+    return 2;
+  }
+
+  function checkinMatchesQuery(item, query) {
+    if (!query) return true;
+    const place = placeForCheckin(item);
+    return [place.name, place.korean, place.address, item.dish, item.note, item.priority, item.slot]
+      .filter(Boolean).join(" ").toLocaleLowerCase("zh-CN").includes(query);
+  }
+
   function renderCheckins() {
     renderCheckinFilters();
+    const query = filterState.query.trim().toLocaleLowerCase("zh-CN");
     const items = combinedCheckins().filter(function (item) {
       const dayMatches = filterState.day === "all" || item.dayId === filterState.day;
       const categoryMatches = filterState.category === "all" || item.category === filterState.category;
-      return dayMatches && categoryMatches;
+      return dayMatches && categoryMatches && checkinMatchesQuery(item, query);
     }).sort(function (a, b) {
-      return DAY_IDS.indexOf(a.dayId) - DAY_IDS.indexOf(b.dayId);
+      const dayDifference = DAY_IDS.indexOf(a.dayId) - DAY_IDS.indexOf(b.dayId);
+      return dayDifference || checkinPriorityRank(a.priority) - checkinPriorityRank(b.priority) || String(a.slot || "").localeCompare(String(b.slot || ""), "zh-CN");
     });
-    document.getElementById("checkin-list").innerHTML = items.length
-      ? items.map(renderCheckinCard).join("")
+    const pending = items.filter(function (item) { return !state.checkinChecks[item.id]; });
+    const completed = items.filter(function (item) { return state.checkinChecks[item.id]; });
+    const pendingHtml = pending.map(renderCheckinCard).join("");
+    const completedHtml = completed.length ? '<details class="completed-checkins" ' + (query || completedCheckinsOpen ? "open" : "") + '><summary><span>已完成 ' + completed.length + ' 个</span><small>' + (query ? "搜索结果" : "展开查看") + " " + icon("chevron-down.svg") + '</small></summary><div class="checkin-list completed-checkin-list">' + completed.map(renderCheckinCard).join("") + "</div></details>" : "";
+    document.getElementById("checkin-list").innerHTML = pending.length || completed.length
+      ? pendingHtml + completedHtml
       : '<div class="empty-state">' + icon("map-pin-off.svg") + "<p>当前筛选下没有打卡点。</p></div>";
+    const searchInput = document.getElementById("checkin-search-input");
+    const clearButton = document.querySelector("[data-clear-checkin-search]");
+    if (searchInput && searchInput.value !== filterState.query) searchInput.value = filterState.query;
+    if (clearButton) clearButton.hidden = !filterState.query;
   }
 
   function renderFlightCard(flight) {
@@ -1188,6 +1299,7 @@
 
   function switchView(viewName, preserveScroll) {
     if (!ALLOWED_VIEWS.includes(viewName)) return;
+    if (viewName === "checkins" && state.activeView !== "checkins") filterState.day = state.activeDay;
     state.activeView = viewName;
     saveState();
     renderAll();
@@ -1199,16 +1311,33 @@
     if (state.activeDay !== dayId) clearExecutionLocation();
     state.activeDay = dayId;
     executionTimelineOpen = false;
+    executionRiskOpen = false;
     saveState();
     renderAll();
   }
 
-  function showToast(message, actionLabel, actionName) {
+  function scrollToPlanSection(targetId) {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    if (target.classList.contains("plan-side") && window.matchMedia("(min-width: 821px)").matches) {
+      target.focus({ preventScroll: true });
+      return;
+    }
+    const stickyOffset = window.matchMedia("(max-width: 560px)").matches ? 190 : 206;
+    const top = Math.max(0, window.scrollY + target.getBoundingClientRect().top - stickyOffset);
+    window.scrollTo({ top, behavior: "instant" });
+    target.focus({ preventScroll: true });
+  }
+
+  function showToast(message, actionLabel, actionName, durationMs) {
     const toast = document.getElementById("toast");
     window.clearTimeout(toastTimer);
     toast.innerHTML = "<span>" + htmlEscape(message) + "</span>" + (actionLabel ? '<button type="button" data-toast-action="' + htmlEscape(actionName) + '">' + htmlEscape(actionLabel) + "</button>" : "");
     toast.hidden = false;
-    toastTimer = window.setTimeout(function () { toast.hidden = true; }, actionLabel ? 5000 : 2300);
+    toastTimer = window.setTimeout(function () {
+      toast.hidden = true;
+      if (actionName === "undo-stamp") lastStampAction = null;
+    }, durationMs || (actionLabel ? 5000 : 2300));
   }
 
   function populateCheckinDayOptions() {
@@ -1270,7 +1399,7 @@
     document.getElementById("checkin-form-error").textContent = "";
     document.getElementById("location-state").textContent = "可稍后补充";
     document.getElementById("location-state").className = "";
-    document.querySelector(".advanced-fields").open = false;
+    document.querySelector(".checkin-details").open = false;
   }
 
   function openCheckinDialog(item) {
@@ -1291,7 +1420,7 @@
       document.getElementById("checkin-dish").value = item.dish || "";
       document.getElementById("checkin-note").value = item.note || "";
       document.getElementById("checkin-form-title").textContent = "编辑打卡点";
-      document.querySelector(".advanced-fields").open = Boolean(item.korean || item.address || item.slot || item.dish || item.note);
+      document.querySelector(".checkin-details").open = Boolean(item.mapInput || item.lat != null || item.lng != null || item.korean || item.address || item.slot || item.dish || item.note || item.mode !== "步行" || item.priority !== "想去");
       updateLocationState();
     }
     document.getElementById("checkin-dialog").showModal();
@@ -1582,6 +1711,9 @@
       localStorage.setItem(RECOVERY_KEY, JSON.stringify(state));
       state = nextState;
       clearExecutionLocation();
+      filterState.day = state.activeDay;
+      filterState.category = "all";
+      filterState.query = "";
       data.days.forEach(function (day) {
         const execution = state.executions[day.id];
         if (execution) syncExecutionFromStamps(day, execution);
@@ -1603,6 +1735,9 @@
       const recovery = JSON.parse(localStorage.getItem(RECOVERY_KEY));
       state = normalizeState(recovery);
       clearExecutionLocation();
+      filterState.day = state.activeDay;
+      filterState.category = "all";
+      filterState.query = "";
       data.days.forEach(function (day) {
         const execution = state.executions[day.id];
         if (execution) syncExecutionFromStamps(day, execution);
@@ -1622,6 +1757,9 @@
     if (!window.confirm("确认清除新增地点、旅行支出、盖章、确认项和备注，恢复默认行程？")) return;
     state = defaultState();
     clearExecutionLocation();
+    filterState.day = state.activeDay;
+    filterState.category = "all";
+    filterState.query = "";
     deletedCheckin = null;
     deletedExpense = null;
     localStorage.removeItem(STORAGE_KEY);
@@ -1696,6 +1834,10 @@
         executionTimelineOpen = details.open;
         return;
       }
+      if (details.matches && details.matches(".completed-checkins")) {
+        completedCheckinsOpen = details.open;
+        return;
+      }
       if (!details.matches || !details.matches("[data-route-disclosure]")) return;
       if (details.closest(".print-day")) return;
       const key = details.dataset.routeDisclosure;
@@ -1705,6 +1847,8 @@
     document.addEventListener("click", function (event) {
       const timelineSummary = event.target.closest("[data-execution-timeline] > summary");
       if (timelineSummary) executionTimelineOpen = !timelineSummary.parentElement.open;
+      const riskSummary = event.target.closest(".execution-risk-details > summary");
+      if (riskSummary) executionRiskOpen = !riskSummary.parentElement.open;
       const startExecutionButton = event.target.closest("[data-start-execution]");
       if (startExecutionButton) {
         startExecution(startExecutionButton.dataset.startExecution);
@@ -1735,6 +1879,11 @@
         chooseSuggestedStep(suggestedStepButton.dataset.executionDay, suggestedStepButton.dataset.suggestedStep);
         return;
       }
+      const selectExecutionStepButton = event.target.closest("[data-select-execution-step]");
+      if (selectExecutionStepButton) {
+        chooseExecutionStep(selectExecutionStepButton.dataset.executionDay, selectExecutionStepButton.dataset.selectExecutionStep);
+        return;
+      }
       if (event.target.closest("[data-update-execution-location]")) {
         updateExecutionLocation();
         return;
@@ -1746,6 +1895,11 @@
       const mapLink = event.target.closest("[data-map-app]");
       if (mapLink) {
         openMapApp(event, mapLink);
+        return;
+      }
+      const planSectionButton = event.target.closest("[data-plan-section]");
+      if (planSectionButton) {
+        scrollToPlanSection(planSectionButton.dataset.planSection);
         return;
       }
       const viewButton = event.target.closest("[data-view-target]");
@@ -1842,6 +1996,12 @@
         renderCheckins();
         return;
       }
+      if (event.target.closest("[data-clear-checkin-search]")) {
+        filterState.query = "";
+        renderCheckins();
+        document.getElementById("checkin-search-input").focus();
+        return;
+      }
       const toastAction = event.target.closest("[data-toast-action]");
       if (toastAction && toastAction.dataset.toastAction === "undo-delete") {
         undoDelete();
@@ -1849,6 +2009,10 @@
       }
       if (toastAction && toastAction.dataset.toastAction === "undo-expense") {
         undoExpenseDelete();
+        return;
+      }
+      if (toastAction && toastAction.dataset.toastAction === "undo-stamp") {
+        undoStamp();
         return;
       }
       if (event.target.closest("#parse-location")) {
@@ -1891,13 +2055,25 @@
 
     document.addEventListener("change", function (event) {
       if (event.target.matches("[data-stamp]")) {
-        state.stamps[event.target.dataset.stamp] = event.target.checked;
+        const key = event.target.dataset.stamp;
+        const checked = event.target.checked;
+        const context = stampActionContext(key);
+        const execution = context.dayId && state.executions[context.dayId];
+        const linkedStepDone = Boolean(execution && context.stepId && isStepDone(execution, context.stepId));
+        const linkedStepActive = Boolean(execution && execution.activeStepId === context.stepId);
+        state.stamps[key] = checked;
         data.days.forEach(function (day) {
           const execution = state.executions[day.id];
           if (execution) syncExecutionFromStamps(day, execution);
         });
         saveState();
         renderAll();
+        if (checked) {
+          lastStampAction = Object.assign({ key, autoAdvanced: Boolean(execution && linkedStepActive && !linkedStepDone && context.stepId && isStepDone(execution, context.stepId)) }, context);
+          showToast("已记录“" + context.label + "”", "撤销", "undo-stamp", 8000);
+        } else if (lastStampAction && lastStampAction.key === key) {
+          lastStampAction = null;
+        }
       } else if (event.target.matches("[data-confirmation]")) {
         state.confirmations[event.target.dataset.confirmation] = event.target.checked;
         saveState();
@@ -1924,6 +2100,9 @@
         saveState();
       } else if (event.target.id === "checkin-lat" || event.target.id === "checkin-lng") {
         updateLocationState();
+      } else if (event.target.id === "checkin-search-input") {
+        filterState.query = event.target.value.slice(0, 160);
+        renderCheckins();
       }
     });
 

@@ -56,9 +56,13 @@
           <div><p class="overline">PLACES TO SAVE</p><h1 id="checkins-title">打卡清单</h1></div>
           <button class="primary-icon-button" type="button" data-open-checkin aria-label="新增打卡点" title="新增打卡点"><img src="assets/icons/plus.svg" alt=""></button>
         </header>
+        <div class="checkin-search">
+          <label for="checkin-search-input"><img src="assets/icons/search.svg" alt=""><input id="checkin-search-input" type="search" autocomplete="off" placeholder="搜索地点、韩文名或推荐内容"></label>
+          <button type="button" data-clear-checkin-search aria-label="清除搜索" title="清除搜索" hidden><img src="assets/icons/x.svg" alt=""></button>
+        </div>
         <div class="filter-block" aria-label="打卡点筛选">
-          <div id="checkin-day-filter" class="chip-row"></div>
-          <div id="checkin-category-filter" class="chip-row"></div>
+          <div class="chip-scroll"><div id="checkin-day-filter" class="chip-row"></div></div>
+          <div class="chip-scroll"><div id="checkin-category-filter" class="chip-row"></div></div>
         </div>
         <div id="checkin-list" class="checkin-list" aria-live="polite"></div>
       </div>
@@ -155,30 +159,29 @@
 
       <div class="form-grid">
         <label class="field span-2"><span>地点名称 <b>*</b></span><input id="checkin-name" name="name" required autocomplete="off" placeholder="例如：海女之家"></label>
-        <label class="field"><span>安排日期 <b>*</b></span><select id="checkin-day" name="dayId" required></select></label>
-        <label class="field"><span>交通方式</span><select id="checkin-mode" name="mode"><option value="步行">步行</option><option value="公交">公交</option><option value="打车">打车</option><option value="骑行">骑行</option></select></label>
+        <label class="field span-2"><span>安排日期 <b>*</b></span><select id="checkin-day" name="dayId" required></select></label>
       </div>
 
-      <section class="location-panel">
-        <div class="form-section-title"><div><img src="assets/icons/map-pin.svg" alt=""><span>地图定位</span></div><small id="location-state">可稍后补充</small></div>
-        <label class="field"><span>地图链接或坐标</span><input id="checkin-map-input" name="mapInput" inputmode="url" placeholder="粘贴 Kakao / Naver 链接或 33.2, 126.5"></label>
-        <div class="location-actions">
-          <button id="parse-location" class="secondary-button" type="button"><img src="assets/icons/search.svg" alt="">解析定位</button>
-          <button id="use-location" class="secondary-button" type="button"><img src="assets/icons/navigation.svg" alt="">使用当前位置</button>
-        </div>
-        <div class="coordinate-grid">
-          <label class="field"><span>纬度</span><input id="checkin-lat" name="lat" inputmode="decimal" placeholder="33.000000"></label>
-          <label class="field"><span>经度</span><input id="checkin-lng" name="lng" inputmode="decimal" placeholder="126.000000"></label>
-        </div>
-      </section>
-
-      <details class="advanced-fields">
-        <summary>补充韩文名、时段和备注</summary>
+      <details class="advanced-fields checkin-details">
+        <summary><span>补充定位与详情</span><small id="location-state">可稍后补充</small></summary>
+        <section class="location-panel">
+          <div class="form-section-title"><div><img src="assets/icons/map-pin.svg" alt=""><span>地图定位</span></div></div>
+          <label class="field"><span>地图链接或坐标</span><input id="checkin-map-input" name="mapInput" inputmode="url" placeholder="粘贴 Kakao / Naver 链接或 33.2, 126.5"></label>
+          <div class="location-actions">
+            <button id="parse-location" class="secondary-button" type="button"><img src="assets/icons/search.svg" alt="">解析定位</button>
+            <button id="use-location" class="secondary-button" type="button"><img src="assets/icons/navigation.svg" alt="">使用当前位置</button>
+          </div>
+          <div class="coordinate-grid">
+            <label class="field"><span>纬度</span><input id="checkin-lat" name="lat" inputmode="decimal" placeholder="33.000000"></label>
+            <label class="field"><span>经度</span><input id="checkin-lng" name="lng" inputmode="decimal" placeholder="126.000000"></label>
+          </div>
+        </section>
         <div class="form-grid advanced-grid">
-          <label class="field"><span>韩文名称</span><input id="checkin-korean" name="korean" autocomplete="off" placeholder="한국어 이름"></label>
+          <label class="field"><span>交通方式</span><select id="checkin-mode" name="mode"><option value="步行">步行</option><option value="公交">公交</option><option value="打车">打车</option><option value="骑行">骑行</option></select></label>
           <label class="field"><span>优先级</span><select id="checkin-priority" name="priority"><option>想去</option><option>必打卡</option><option>顺路</option><option>备选</option></select></label>
-          <label class="field span-2"><span>地址</span><input id="checkin-address" name="address" autocomplete="street-address" placeholder="韩文地址最方便司机确认"></label>
+          <label class="field"><span>韩文名称</span><input id="checkin-korean" name="korean" autocomplete="off" placeholder="한국어 이름"></label>
           <label class="field"><span>计划时段</span><input id="checkin-slot" name="slot" placeholder="例如：返港后 13:30"></label>
+          <label class="field span-2"><span>地址</span><input id="checkin-address" name="address" autocomplete="street-address" placeholder="韩文地址最方便司机确认"></label>
           <label class="field"><span>推荐内容</span><input id="checkin-dish" name="dish" placeholder="招牌菜或想看的内容"></label>
           <label class="field span-2"><span>备注</span><textarea id="checkin-note" name="note" rows="3" placeholder="排队上限、休息日、是否适合独自用餐……"></textarea></label>
         </div>
