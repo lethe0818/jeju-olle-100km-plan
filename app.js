@@ -28,6 +28,7 @@
   let deletedExpense = null;
   let toastTimer = null;
   let printRestore = null;
+  const openRouteDetails = new Set();
 
   function initialDayId() {
     const now = new Date();
@@ -409,21 +410,25 @@
   function renderRouteTeaser(day) {
     const guides = routeGuidesForDay(day);
     if (!guides.length) return "";
-    return '<section class="route-teaser"><div class="route-teaser-head"><h3>沿途看点</h3><button class="text-button" type="button" data-view-target="plan">查看路线</button></div>' + guides.map(function (guide) {
+    const key = "today-" + day.id;
+    const pointCount = guides.reduce(function (count, guide) { return count + guide.points.length; }, 0);
+    return '<details class="route-teaser" data-route-disclosure="' + key + '" ' + (openRouteDetails.has(key) ? "open" : "") + '><summary class="route-teaser-head"><h3>沿途看点</h3><span>' + pointCount + ' 处 ' + icon("chevron-down.svg") + '</span></summary><div class="route-teaser-content">' + guides.map(function (guide) {
       return '<p><strong>' + htmlEscape(guide.routeId) + '号线 · ' + htmlEscape(guide.title) + '</strong><span>' + guide.points.map(function (point) { return htmlEscape(data.places[point.place].name); }).join(" · ") + '</span></p>';
-    }).join("") + '</section>';
+    }).join("") + '<button class="text-button" type="button" data-view-target="plan">查看路线</button></div></details>';
   }
 
-  function renderRouteGuides(day) {
+  function renderRouteGuides(day, printMode) {
     const guides = routeGuidesForDay(day);
     if (!guides.length) return "";
-    return '<div class="section-heading"><h2>沿途特色与打卡</h2><span>按本线公里标</span></div><div class="route-guide-list">' + guides.map(function (guide) {
+    const key = "plan-" + day.id;
+    const pointCount = guides.reduce(function (count, guide) { return count + guide.points.length; }, 0);
+    return '<details class="route-guide-disclosure" data-route-disclosure="' + key + '" ' + (printMode || openRouteDetails.has(key) ? "open" : "") + '><summary class="section-heading route-guide-summary"><h2>沿途特色与打卡</h2><span>' + pointCount + ' 处看点 ' + icon("chevron-down.svg") + '</span></summary><div class="route-guide-list">' + guides.map(function (guide) {
       return '<section class="route-guide"><header class="route-guide-head"><div><strong>' + htmlEscape(guide.routeId) + '号线</strong><h3>' + htmlEscape(guide.title) + '</h3></div><a href="' + htmlEscape(officialCourseUrl(guide.routeId)) + '" target="_blank" rel="noopener" aria-label="查看' + guide.routeId + '号线官方路线介绍">' + icon("external-link.svg") + '官方路线</a></header><p class="route-guide-intro">' + htmlEscape(guide.intro) + '</p><div class="route-highlights">' + guide.points.map(function (point) {
         const place = data.places[point.place];
         const checked = Boolean(state.checkinChecks[point.id]);
         return '<article class="route-highlight ' + (checked ? "completed" : "") + '"><div class="route-highlight-main"><span class="route-highlight-km">' + point.km.toFixed(1) + '<small>KM</small></span><div class="route-highlight-copy"><div class="route-highlight-label"><span>顺路打卡</span><small>' + htmlEscape(point.stop) + '</small></div><h4>' + htmlEscape(place.name) + '</h4><p lang="ko">' + htmlEscape(place.korean) + '</p><p>' + htmlEscape(point.note) + '</p></div><button class="checkin-toggle ' + (checked ? "checked" : "") + '" type="button" data-toggle-checkin="' + htmlEscape(point.id) + '" aria-label="' + (checked ? "取消打卡" : "标记已打卡") + htmlEscape(place.name) + '" title="' + (checked ? "取消打卡" : "标记已打卡") + '">' + icon(checked ? "check.svg" : "bookmark.svg") + '</button></div><div class="route-highlight-actions">' + mapLinks(place, data.routes[guide.routeId].mode, true) + '<span>韩文地名搜索 · 按偶来路标行走</span></div></article>';
       }).join("") + '</div></section>';
-    }).join("") + '</div>';
+    }).join("") + '</div></details>';
   }
 
   function confirmationsForDay(dayId) {
@@ -500,7 +505,7 @@
     const hotel = day.hotel ? data.places[day.hotel] : null;
     const dayCheckins = checkinsForDay(day.id).filter(function (item) { return !item.routeHighlight; });
     return '<article class="' + (printMode ? "print-day" : "plan-day") + '"><header class="plan-day-header"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + "</h2><p>" + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? "WALK + BIKE" : "KM WALK") + "</small></div></header>" +
-      '<div class="plan-layout"><div>' + renderRouteGuides(day) + renderTimeline(day) +
+      '<div class="plan-layout"><div>' + renderRouteGuides(day, printMode) + renderTimeline(day) +
       (day.cutoff ? '<section class="cutoff-card"><strong>硬截止 · ' + htmlEscape(day.cutoff) + "</strong><p>" + htmlEscape(day.fallback) + '</p><label class="fallback-toggle"><input type="checkbox" data-fallback="' + day.id + '" ' + (state.fallbacks[day.id] ? "checked" : "") + '><span>' + (state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案") + "</span></label></section>" : "") +
       renderStamps(day) +
       (dayCheckins.length ? '<div class="section-heading"><h2>当天打卡点</h2><span>' + dayCheckins.length + ' 个</span></div><div class="checkin-list">' + dayCheckins.map(renderCheckinCard).join("") + "</div>" : "") +
@@ -1131,6 +1136,14 @@
   }
 
   function bindEvents() {
+    document.addEventListener("toggle", function (event) {
+      const details = event.target;
+      if (!details.matches || !details.matches("[data-route-disclosure]")) return;
+      if (details.closest(".print-day")) return;
+      const key = details.dataset.routeDisclosure;
+      if (details.open) openRouteDetails.add(key);
+      else openRouteDetails.delete(key);
+    }, true);
     document.addEventListener("click", function (event) {
       const mapLink = event.target.closest("[data-map-app]");
       if (mapLink) {
@@ -1183,6 +1196,8 @@
       }
       const toggleCheckin = event.target.closest("[data-toggle-checkin]");
       if (toggleCheckin) {
+        const routeDetails = toggleCheckin.closest("[data-route-disclosure]");
+        if (routeDetails && routeDetails.open) openRouteDetails.add(routeDetails.dataset.routeDisclosure);
         const id = toggleCheckin.dataset.toggleCheckin;
         state.checkinChecks[id] = !state.checkinChecks[id];
         saveState();

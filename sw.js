@@ -1,4 +1,4 @@
-const CACHE_NAME = "jeju-olle-app-v4-route-guides-20260915-5";
+const CACHE_NAME = "jeju-olle-app-v4-route-guides-collapsed-20260915-6";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -15,6 +15,7 @@ const APP_SHELL = [
   "./assets/icons/calendar-days.svg",
   "./assets/icons/camera.svg",
   "./assets/icons/check.svg",
+  "./assets/icons/chevron-down.svg",
   "./assets/icons/coffee.svg",
   "./assets/icons/database.svg",
   "./assets/icons/download.svg",

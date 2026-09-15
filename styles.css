@@ -258,13 +258,23 @@ img { display: block; max-width: 100%; }
 .section-heading h2 { margin: 0; font-size: 18px; line-height: 1.2; }
 .section-heading > span { color: var(--muted); font: 650 11px var(--mono); }
 
-.route-teaser { margin-top: 15px; padding: 11px 0 12px; border-bottom: 1px solid var(--line); }
-.route-teaser-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.route-teaser { margin-top: 15px; border-bottom: 1px solid var(--line); }
+.route-teaser-head { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.route-teaser-content { padding: 0 0 12px; }
 .route-teaser h3 { margin: 0; font-size: 15px; }
 .route-teaser p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .route-teaser p strong { display: block; color: var(--graphite); font-size: 12px; }
 .route-teaser p span { display: block; margin-top: 2px; overflow-wrap: anywhere; }
-.route-teaser .text-button { padding: 0 8px; color: var(--ocean-deep); font-size: 11px; }
+.route-teaser .text-button { margin-top: 8px; padding: 0 8px; color: var(--ocean-deep); font-size: 11px; }
+
+.route-teaser-head, .route-guide-summary { list-style: none; cursor: pointer; }
+.route-teaser-head::-webkit-details-marker, .route-guide-summary::-webkit-details-marker { display: none; }
+.route-teaser-head:focus-visible, .route-guide-summary:focus-visible { outline: 2px solid var(--ocean); outline-offset: 3px; border-radius: var(--radius-sm); }
+.route-teaser-head > span, .route-guide-summary > span { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; color: var(--muted); font: 650 11px var(--mono); }
+.route-teaser-head img, .route-guide-summary img { width: 18px; height: 18px; flex: 0 0 18px; transition: transform 180ms ease; }
+.route-teaser[open] .route-teaser-head img, .route-guide-disclosure[open] .route-guide-summary img { transform: rotate(180deg); }
+.route-guide-summary { min-height: 48px; align-items: center; margin-bottom: 0; }
+.route-guide-disclosure[open] .route-guide-summary { margin-bottom: 11px; }
 
 .route-guide-list { border-top: 1px solid var(--line-strong); }
 .route-guide { padding: 14px 0 0; border-bottom: 1px solid var(--line-strong); }
