@@ -35,6 +35,52 @@ async function waitForAppWorker(page) {
 test.beforeAll(async () => { testServer = await startStaticServer(4183); });
 test.afterAll(async () => { await closeServer(testServer); });
 
+test("official stamp locations, split route 10, and two-stamp Gapado course", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url);
+  await page.getByRole("button", { name: "计划" }).click();
+  const expected = { "0924": 6, "0925": 6, "0926": 6, "0927": 5, "0928": 3 };
+  for (const [dayId, count] of Object.entries(expected)) {
+    await page.locator(`#view-plan [data-day="${dayId}"]`).click();
+    await expect(page.locator("#plan-content .stamp-point")).toHaveCount(count);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  }
+  await page.locator('#view-plan [data-day="0924"]').click();
+  await expect(page.locator('.route-stamps', { hasText: "1-1号线" }).locator('.stamp-source a')).toHaveAttribute("href", "https://www.jejuolle.org/trail#/road/01-1");
+  await page.locator('#view-plan [data-day="0927"]').click();
+  await expect(page.locator('.stamp-point', { hasText: "섯알오름 주차장 정자" })).toBeVisible();
+  await page.locator("#plan-content .stamp-grid").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/mobile-stamps-390.png" });
+  await page.locator('[data-stamp="10-middle"]').check();
+  await page.locator('#view-plan [data-day="0928"]').click();
+  await expect(page.locator('[data-stamp="10-middle"]')).toHaveCount(0);
+  await expect(page.locator('[data-stamp="10-end"]')).toHaveCount(1);
+  await expect(page.locator('[data-stamp="10-1-middle"]')).toHaveCount(0);
+  await expect(page.locator('.stamp-point', { hasText: "가파치안센터" })).toBeVisible();
+  const imageLinks = await page.locator('.stamp-map-link').evaluateAll(links => links.map(link => link.href));
+  expect(imageLinks).toHaveLength(2);
+  expect(imageLinks.every(link => link.startsWith("https://contents.ollepass.org/static/homepage/trail/img/road/"))).toBe(true);
+  await page.locator('[data-stamp="10-1-start"]').check();
+  await page.locator('[data-stamp="10-1-end"]').check();
+  await page.reload();
+  await expect(page.locator('[data-stamp="10-1-start"]')).toBeChecked();
+  await expect(page.locator('[data-stamp="10-1-end"]')).toBeChecked();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")).stamps["10-middle"])).toBe(true);
+  const routeData = await page.evaluate(() => window.TRIP_DATA);
+  expect(Object.keys(routeData.stampLocations)).toHaveLength(9);
+  expect(routeData.routes["10-1"].stamps).toEqual(["start", "end"]);
+  for (const width of [768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.locator('#view-plan [data-day="0927"]').click();
+    await page.locator("#plan-content .stamp-grid").scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    await page.screenshot({ path: `test-results/stamps-${width}.png` });
+  }
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator("#plan-content .stamp-point")).toHaveCount(5);
+  await expect(page.locator("#plan-content .stamp-map-link").first()).toBeHidden();
+});
+
 test("mobile custom check-in flow", async ({ page }) => {
   const errors = [];
   page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });

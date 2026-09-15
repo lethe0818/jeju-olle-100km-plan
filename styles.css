@@ -392,32 +392,45 @@ img { display: block; max-width: 100%; }
 
 .stamp-grid { display: grid; gap: 9px; }
 .route-stamps {
-  min-height: 68px;
-  display: grid;
-  grid-template-columns: minmax(130px, 1fr) repeat(3, 72px);
-  align-items: stretch;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface);
 }
-.route-stamps.stamp-count-2 { grid-template-columns: minmax(130px, 1fr) repeat(2, 72px); }
-.route-stamps.stamp-count-1 { grid-template-columns: minmax(130px, 1fr) 82px; }
-.route-label { padding: 12px 14px; align-self: center; }
-.route-label strong { display: block; }
-.route-label span { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
+.route-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--mist); }
+.route-label strong { display: block; font-size: 15px; }
+.route-label span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.stamp-map-link { min-height: 44px; display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; color: var(--ocean-deep); font-size: 11px; font-weight: 800; text-decoration: none; }
+.stamp-map-link img { width: 16px; height: 16px; }
+.stamp-route-hint { margin: 0; padding: 10px 14px; color: var(--risk); font-size: 11px; background: var(--tangerine-soft); }
+.stamp-point { padding: 11px 14px 13px; border-top: 1px solid var(--line); }
+.stamp-point-main { display: grid; grid-template-columns: 42px minmax(0, 1fr) 54px; align-items: start; gap: 10px; }
+.stamp-km { padding-top: 4px; color: var(--ocean-deep); font: 800 15px var(--mono); }
+.stamp-km small { display: block; margin-top: 2px; color: var(--muted); font: 700 9px var(--mono); }
+.stamp-point-text { min-width: 0; }
+.stamp-stage { display: block; margin-bottom: 3px; color: var(--tangerine); font-size: 10px; font-weight: 800; }
+.stamp-point-text strong { display: block; color: var(--graphite); font-size: 14px; word-break: keep-all; overflow-wrap: anywhere; }
+.stamp-point-text p { margin: 4px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .stamp-check {
-  min-width: 0;
-  display: grid;
-  place-content: center;
-  gap: 4px;
-  border-left: 1px solid var(--line);
-  font-size: 11px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 6px;
+  background: var(--mist);
+  font-size: 10px;
   text-align: center;
   cursor: pointer;
 }
-.stamp-check input { width: 18px; height: 18px; margin: 0 auto; accent-color: var(--success); }
+.stamp-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--success); }
 .stamp-check:has(input:checked) { color: var(--success); background: var(--success-soft); }
+.stamp-point .map-actions { margin-top: 8px; margin-left: 52px; }
+.stamp-point .map-button { min-width: 0; min-height: 44px; padding: 0 12px; font-size: 10px; }
+.stamp-source { margin: 0; padding: 10px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; line-height: 1.5; }
+.stamp-source a { color: var(--ocean-deep); font-weight: 700; }
 
 .hotel-card { padding: 17px; border-radius: var(--radius-md); color: white; background: var(--ocean-deep); }
 .hotel-card h3 { margin: 0; font-size: 16px; }
@@ -886,11 +899,10 @@ body[data-density="compact"] .section-heading { margin-top: 21px; }
   .timeline-card h3 { font-size: 14px; }
   .plan-day-header h2 { font-size: 24px; }
   .plan-day-header { gap: 10px; }
-  .route-stamps { grid-template-columns: minmax(96px, 1fr) repeat(3, 50px); }
-  .route-stamps.stamp-count-2 { grid-template-columns: minmax(96px, 1fr) repeat(2, 50px); }
-  .route-stamps.stamp-count-1 { grid-template-columns: minmax(96px, 1fr) 62px; }
-  .route-label { padding: 10px; }
-  .stamp-check { font-size: 10px; }
+  .route-label { padding: 10px 12px; }
+  .stamp-point { padding: 10px 12px 12px; }
+  .stamp-point .map-actions { margin-left: 52px; }
+  .stamp-point .map-button { flex: 1; }
   .filter-block { top: 58px; margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; }
   .checkin-card { padding: 14px; }
   .checkin-card h2 { font-size: 16px; }
@@ -946,5 +958,5 @@ body[data-density="compact"] .section-heading { margin-top: 21px; }
   .print-day:first-child { break-before: auto; }
   .plan-layout { display: block; }
   .timeline-card, .route-stamps { box-shadow: none; break-inside: avoid; }
-  .map-actions, .fallback-toggle, .day-notes { display: none; }
+  .map-actions, .stamp-map-link, .fallback-toggle, .day-notes { display: none; }
 }

@@ -57,7 +57,21 @@
     "7-1": { id: "7-1", km: 15.7, mode: "徒步", counts: true },
     "8": { id: "8", km: 19.3, mode: "徒步", counts: true },
     "10": { id: "10", km: 15.6, mode: "徒步", counts: true },
-    "10-1": { id: "10-1", km: 4.2, mode: "徒步", counts: true, optional: true }
+    "10-1": { id: "10-1", km: 4.2, mode: "徒步", counts: true, optional: true, stamps: ["start", "end"] }
+  };
+
+  // Names and route kilometer marks come from Jeju Olle's official course diagrams.
+  // No nearby landmark coordinate is presented as an unverified middle stamp box.
+  const stampLocations = {
+    "1": { map: "road_01_imgmap_mo_202512.jpg", start: { korean: "시흥리 버스정류장", km: 0, place: "siheung" }, middle: { korean: "목화휴게소", km: 8.1 }, end: { korean: "광치기해변", km: 15.1, place: "gwangchigi" } },
+    "1-1": { map: "road_01-1_imgmap_mo_2024.jpg", start: { korean: "천진항 A", km: 0, place: "udo" }, middle: { korean: "하고수동해수욕장", km: 6.8 }, end: { korean: "천진항 A", km: 13.2, place: "udo" }, hint: "官方图另标 하우목동항 B（3.5 km / 13.2 km），先确认船实际停靠哪个港口。" },
+    "5": { map: "road_05_imgmap_mo_2024.jpg", start: { korean: "남원포구", km: 0, place: "namwon" }, middle: { korean: "위미 동백나무 군락지", km: 4.9 }, end: { korean: "쇠소깍다리", km: 13.4, place: "soesokkak" } },
+    "6": { map: "road_06_imgmap_mo_2024.jpg", start: { korean: "쇠소깍다리", km: 0, place: "soesokkak" }, middle: { korean: "소라의 성", km: 7.4 }, end: { korean: "제주올레여행자센터", km: 10.1, place: "traveler" } },
+    "7": { map: "road_07_imgmap_mo_2025.jpg", start: { korean: "제주올레여행자센터", km: 0, place: "traveler" }, middle: { korean: "두머니물공원", km: 9.8 }, end: { korean: "서귀포버스터미널 앞", km: 12.9, place: "seogwipoTerminal" } },
+    "7-1": { map: "road_07-1_imgmap_mo_2024.jpg", start: { korean: "서귀포버스터미널 앞", km: 0, place: "seogwipoTerminal" }, middle: { korean: "고근산 정상 (산불감시초소)", km: 7.1 }, end: { korean: "제주올레여행자센터", km: 15.7, place: "traveler" } },
+    "8": { map: "road_08_imgmap_mo_2026.jpg", start: { korean: "월평아왜낭목 쉼터", km: 0, place: "wolpyeong" }, middle: { korean: "베릿내 공원 정자", km: 8.4 }, end: { korean: "대평포구", km: 19.3, place: "daepyeong" } },
+    "10": { map: "road_10_imgmap_mo_2025.jpg", start: { korean: "제주올레공식안내소", km: 0, note: "和顺金沙滩约在起点后 0.1 km；章在官方 안내소。" }, middle: { korean: "섯알오름 주차장 정자", km: 11.4, place: "seotal" }, end: { korean: "하모체육공원", km: 15.6, note: "终点章在运动公园；领证服务点另见下方时间轴。" } },
+    "10-1": { map: "road_10-1_imgmap_mo_2024.jpg", start: { korean: "상동포구", km: 0, place: "gapado" }, end: { korean: "가파치안센터", km: 4.2, note: "官方分段图未标中间章；纸质护照以现场为准。终点不在返程码头，另留回港时间。" } }
   };
 
   const days = [
@@ -150,9 +164,9 @@
       id: "0928", date: "9月28日", weekday: "周一", label: "续10 + 10-1", walkKm: 8.4, routeIds: ["10-1"],
       stampPlan: [
         { routeId: "10", stamps: ["end"], note: "续走并盖终点章" },
-        { routeId: "10-1", stamps: ["start", "middle", "end"], note: "额外路线，可取消" }
+        { routeId: "10-1", stamps: ["start", "end"], note: "额外路线，可取消 · 官方图仅两章" }
       ],
-      lead: "先完成10号线达到102.1 km，再去加波岛；返港后13:00办理证书。",
+      lead: "先完成10号线达到102.1 km；加波岛可取消，返港后尽早办理证书。",
       next: { time: "06:30", title: "起床、早餐与整理行李", detail: "全部行李在07:00前整理完成。", mode: "准备", place: "amantov" },
       timeline: [
         { time: "06:30", title: "起床、早餐与整理行李", detail: "早餐从简，07:00准时退房。", type: "准备", place: "amantov" },
@@ -161,15 +175,15 @@
         { time: "08:35", title: "完成10号线，累计102.1 km", detail: "暂不等09:00领证，直接前往云津港。", type: "到达", place: "hamo" },
         { time: "08:45", title: "摹瑟浦 → 云津港", detail: "打车约5–10分钟，预留充足取票时间。", type: "打车", place: "unjin" },
         { time: "10:00", title: "乘船前往加波岛", detail: "返程时间以往返订单为准，优先12:20返港组合。", type: "船班", place: "gapado" },
-        { time: "10:20", title: "10-1号线 · 加波岛环线", detail: "4.2 km，预计1–1.5小时，完成三章。", type: "徒步", place: "gapado" },
-        { time: "12:20", title: "乘船返回云津港", detail: "下船后打车前往11号线官方服务点。", type: "船班", place: "unjin" },
-        { time: "13:00", title: "领取100 km完走证书", detail: "携带本人纸质护照，填写QR问卷；下午受理13:00–16:30。", type: "证书", place: "hamo" },
+        { time: "10:20", title: "10-1号线 · 加波岛", detail: "4.2 km，官方图标起点与终点两章；终点在加波治安中心，返码头需另留时间。", type: "徒步", place: "gapado" },
+        { time: "12:20", title: "目标返船 · 先确认回港接驳", detail: "10-1终点不在上洞浦口；只有确认终点回港交通与返船时间后才安排此船，否则选较晚班。", type: "船班", place: "unjin" },
+        { time: "13:00", title: "目标领取100 km证书", detail: "返港后携本人纸质护照办理；若晚船返港，顺延办理但须赶在16:30受理结束前。", type: "证书", place: "hamo" },
         { time: "13:35", title: "午餐或直接去机场", detail: "美荣家与提前去机场二选一；用餐则14:30后出发。", type: "选择", place: "miyeong" },
         { time: "14:30", title: "摹瑟浦 → 济州机场", detail: "搭明确途经机场的151系列班次；无合适班次则打车。", type: "公交", place: "airport" },
         { time: "16:00", title: "抵达济州机场", detail: "最晚不晚于19:30抵达，预留国际航班手续时间。", type: "航班", place: "airport" },
         { time: "22:40", title: "7C8133飞往北京首都", detail: "CJU → PEK T2，预计次日01:10抵达；以订单为准。", type: "航班" }
       ],
-      cutoff: "09:00仍未完成10号线则取消加波岛；返港延误时先领证，午餐直接跳过。",
+      cutoff: "09:00仍未完成10号线、或无法确认加波岛返港接驳与证书16:30前受理，则取消加波岛；返港延误先领证，跳过午餐。",
       fallback: "加波岛停航：完成10号线并领取证书后直接休整或前往机场。",
       hotel: null
     }
@@ -203,6 +217,7 @@
     places,
     defaultCheckins,
     routes,
+    stampLocations,
     days,
     confirmations,
     flights,

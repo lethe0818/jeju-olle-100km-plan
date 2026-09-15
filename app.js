@@ -286,7 +286,7 @@
   function completedKm() {
     return Object.values(data.routes).reduce(function (total, route) {
       if (!route.counts) return total;
-      const complete = ["start", "middle", "end"].every(function (stamp) {
+      const complete = (route.stamps || ["start", "middle", "end"]).every(function (stamp) {
         return Boolean(state.stamps[route.id + "-" + stamp]);
       });
       return total + (complete ? route.km : 0);
@@ -438,17 +438,27 @@
 
   function renderStamps(day) {
     const plans = day.stampPlan || day.routeIds.map(function (routeId) {
-      return { routeId, stamps: ["start", "middle", "end"] };
+      return { routeId, stamps: data.routes[routeId].stamps || ["start", "middle", "end"] };
     });
     if (!plans.length) return "";
     const labels = { start: "起点", middle: "中间", end: "终点" };
-    return '<div class="section-heading"><h2>纸质护照盖章</h2><span>整条路线三章齐全才计入</span></div><div class="stamp-grid">' + plans.map(function (plan) {
+    return '<div class="section-heading"><h2>纸质护照盖章</h2><span>按官方分段图</span></div><div class="stamp-grid">' + plans.map(function (plan) {
       const route = data.routes[plan.routeId];
+      const locations = data.stampLocations[plan.routeId];
       const note = plan.note || (route.counts ? "计入认证" : "骑行记录");
-      return '<div class="route-stamps stamp-count-' + plan.stamps.length + '"><div class="route-label"><strong>' + route.id + '号线</strong><span>' + route.km + " km · " + htmlEscape(note) + "</span></div>" + plan.stamps.map(function (stamp) {
+      const officialImage = "https://contents.ollepass.org/static/homepage/trail/img/road/" + locations.map;
+      const course = route.id.split("-");
+      course[0] = course[0].padStart(2, "0");
+      return '<section class="route-stamps"><div class="route-label"><div><strong>' + route.id + '号线</strong><span>' + route.km + " km · " + htmlEscape(note) + '</span></div><a class="stamp-map-link" href="' + htmlEscape(officialImage) + '" target="_blank" rel="noopener" aria-label="查看' + route.id + '号线官方盖章分段图">' + icon("map.svg") + '官方章点图</a></div>' + (locations.hint ? '<p class="stamp-route-hint">' + htmlEscape(locations.hint) + "</p>" : "") + plan.stamps.map(function (stamp) {
         const key = plan.routeId + "-" + stamp;
-        return '<label class="stamp-check"><input type="checkbox" data-stamp="' + key + '" ' + (state.stamps[key] ? "checked" : "") + '><span>' + labels[stamp] + "</span></label>";
-      }).join("") + "</div>";
+        const point = locations[stamp];
+        const nearby = point.place ? data.places[point.place] : null;
+        const place = nearby ? Object.assign({}, nearby, { name: point.korean + "章附近", korean: point.korean }) : {
+          name: point.korean + "章", korean: point.korean,
+          address: "官方图：本线 " + point.km.toFixed(1) + " km 处；请沿现场偶来标识找盖章亭"
+        };
+        return '<article class="stamp-point"><div class="stamp-point-main"><span class="stamp-km">' + point.km.toFixed(1) + '<small>KM</small></span><div class="stamp-point-text"><span class="stamp-stage">' + labels[stamp] + '章</span><strong lang="ko">' + htmlEscape(point.korean) + '</strong><p>' + htmlEscape(point.note || (nearby ? "导航到附近地标，按官方图和现场路标找章亭" : "未核实章亭精确坐标 · 地名搜索")) + '</p></div><label class="stamp-check"><input type="checkbox" data-stamp="' + key + '" aria-label="' + route.id + '号线' + labels[stamp] + '章已盖" ' + (state.stamps[key] ? "checked" : "") + '><span>已盖</span></label></div>' + mapLinks(place, "步行", true) + '</article>';
+      }).join("") + '<p class="stamp-source">地点及公里标据<a href="https://www.jejuolle.org/trail#/road/' + course.join("-") + '" target="_blank" rel="noopener">济州偶来官方路线页</a>；官方章点图需联网打开，图并非盖章亭实拍。</p></section>';
     }).join("") + "</div>";
   }
 
@@ -567,7 +577,7 @@
       '<div class="more-grid">' +
         renderExpenseLedger() +
         '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("plane.svg") + '<h2>航班</h2></div><span class="type-tag">以订单为准</span></div><div class="flight-pair">' + data.flights.map(renderFlightCard).join("") + "</div></section>" +
-        '<section class="more-section"><div class="more-section-head"><div>' + icon("award.svg") + '<h2>100 km证书</h2></div><span class="type-tag walk">' + (km >= 100 ? "READY" : km.toFixed(1) + " KM") + '</span></div><div class="certificate-callout"><strong>9月28日 13:00</strong><p>加波岛返港后，在11号线官方服务点办理。</p></div><ul class="fact-list"><li><span>受理时间</span><strong>09:00–11:30<br>13:00–16:30</strong></li><li><span>核心认证里程</span><strong>102.1 km</strong></li><li><span>必须携带</span><strong>本人纸质护照</strong></li><li><span>现场步骤</span><strong>QR问卷 + 验章</strong></li></ul>' + mapLinks(hamo, "步行") + "</section>" +
+        '<section class="more-section"><div class="more-section-head"><div>' + icon("award.svg") + '<h2>100 km证书</h2></div><span class="type-tag walk">' + (km >= 100 ? "READY" : km.toFixed(1) + " KM") + '</span></div><div class="certificate-callout"><strong>9月28日 · 返港后</strong><p>13:00起目标办理；晚船返港时须赶在16:30受理结束前。</p></div><ul class="fact-list"><li><span>受理时间</span><strong>09:00–11:30<br>13:00–16:30</strong></li><li><span>核心认证里程</span><strong>102.1 km</strong></li><li><span>必须携带</span><strong>本人纸质护照</strong></li><li><span>现场步骤</span><strong>QR问卷 + 验章</strong></li></ul>' + mapLinks(hamo, "步行") + "</section>" +
         '<section class="more-section"><div class="more-section-head"><div>' + icon("briefcase.svg") + '<h2>行李与船班确认</h2></div><span class="type-tag">' + confirmed + "/" + allConfirmations.length + "</span></div>" + renderConfirmationRows(allConfirmations) + "</section>" +
         '<section class="more-section"><div class="more-section-head"><div>' + icon("link.svg") + '<h2>官方查询</h2></div></div><div class="official-links">' + officialLinks.map(function (link) {
           return '<a class="official-link" href="' + link[1] + '" target="_blank" rel="noopener"><span>' + htmlEscape(link[0]) + "</span>" + icon("external-link.svg") + "</a>";
