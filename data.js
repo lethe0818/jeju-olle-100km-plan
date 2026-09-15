@@ -32,7 +32,26 @@
     angeori: { name: "Angeori Bangeori", korean: "안거리밖거리", address: "제주 서귀포시 솔동산로 6-1", lat: 33.2442633, lng: 126.5641048 },
     chunsim: { name: "Chunsim's 总店", korean: "춘심이네 본점", address: "제주 서귀포시 안덕면 창천중앙로24번길 16", lat: 33.2645164, lng: 126.370493 },
     hodoBakery: { name: "Hodo Bakery", korean: "호도제과", address: "제주 서귀포시 안덕면 화순로 132", lat: 33.2465429, lng: 126.3322486 },
-    miyeong: { name: "Miyeongine 生鱼片餐厅", korean: "미영이네", address: "제주 서귀포시 대정읍 하모항구로 42", lat: 33.217709, lng: 126.2497839 }
+    miyeong: { name: "Miyeongine 生鱼片餐厅", korean: "미영이네", address: "제주 서귀포시 대정읍 하모항구로 42", lat: 33.217709, lng: 126.2497839 },
+    malmiOreum: { name: "马头岳观景", korean: "말미오름", address: "" },
+    jongdalSalt: { name: "终达里旧盐田", korean: "종달리 옛 소금밭", address: "" },
+    udoCoral: { name: "牛岛红藻团块海滨", korean: "홍조단괴해변", address: "" },
+    hagosudong: { name: "牛岛下古水洞海滩", korean: "하고수동해수욕장", address: "" },
+    keunEong: { name: "大崖海岸入口", korean: "큰엉 입구", address: "" },
+    neopBille: { name: "宽阔熔岩海岸", korean: "넙빌레", address: "" },
+    soraCastle: { name: "螺之城", korean: "소라의 성", address: "" },
+    olleMarketEntrance: { name: "西归浦每日偶来市场入口", korean: "서귀포 매일올레시장 입구", address: "" },
+    solbitBada: { name: "Solbit Bada 海岸", korean: "솔빛바다", address: "" },
+    beophwanPort: { name: "法还浦口", korean: "법환포구", address: "" },
+    eongttoFalls: { name: "Eongtto 瀑布", korean: "엉또폭포", address: "" },
+    hannonCrater: { name: "Hannon 火山口", korean: "하논분화구", address: "" },
+    daepoColumns: { name: "大浦柱状节理", korean: "대포주상절리", address: "" },
+    nonjitmul: { name: "Nonjitmul 海岸水池", korean: "논짓물", address: "" },
+    sagyeVillage: { name: "四季渔村海岸", korean: "사계어촌체험마을", address: "" },
+    songaksanView: { name: "松岳山观景台", korean: "송악산 전망대", address: "" },
+    hamoBeach: { name: "下摹海滩", korean: "하모해수욕장", address: "" },
+    natGol: { name: "加波岛海岸 · Natgolchaengi", korean: "낫골챙이", address: "" },
+    keunWangjin: { name: "加波岛海岸 · Keunwangjinmul", korean: "큰왕진물", address: "" }
   };
 
   const defaultCheckins = [
@@ -73,6 +92,52 @@
     "10": { map: "road_10_imgmap_mo_2025.jpg", start: { korean: "제주올레공식안내소", km: 0, note: "和顺金沙滩约在起点后 0.1 km；章在官方 안내소。" }, middle: { korean: "섯알오름 주차장 정자", km: 11.4, place: "seotal" }, end: { korean: "하모체육공원", km: 15.6, note: "终点章在运动公园；领证服务点另见下方时间轴。" } },
     "10-1": { map: "road_10-1_imgmap_mo_2024.jpg", start: { korean: "상동포구", km: 0, place: "gapado" }, end: { korean: "가파치안센터", km: 4.2, note: "官方分段图未标中间章；纸质护照以现场为准。终点不在返程码头，另留回港时间。" } }
   };
+
+  const routeGuides = {
+    "1": { title: "山丘到海岸", intro: "济州偶来最早开放的路：先登火山丘陵看城山与牛岛，再沿旧盐田和海岸走向广峙其。", highlights: [
+      { id: "route-1-malmi", place: "malmiOreum", dayId: "0924", km: 1.8, stop: "5分钟", note: "登高看城山日出峰、牛岛与东部田野；不要久留，以免错过14:00牛岛船。" },
+      { id: "route-1-salt", place: "jongdalSalt", dayId: "0924", km: 6.5, stop: "3分钟", note: "终达里旧盐田遗址，留意海岸村落与旧制盐历史。" }
+    ] },
+    "1-1": { title: "牛岛海滨与石墙", intro: "海岸、草地和石墙交替出现；骑行只作游览，不计100 km徒步认证。", highlights: [
+      { id: "route-1-1-coral", place: "udoCoral", dayId: "0924", km: 2.3, stop: "5分钟", note: "看浅色红藻团块海滨；先确认实际登陆港，再对应官方A/B线路。" },
+      { id: "route-1-1-hagosu", place: "hagosudong", dayId: "0924", km: 6.8, stop: "盖章＋5分钟", note: "这里也是中间章地点；短暂停留即可，保留回港和还车时间。" }
+    ] },
+    "5": { title: "大崖与山茶树村落", intro: "从南元浦口沿海岸进入大崖散步道，途中可见石岸、常绿林和山茶树围成的村落。", highlights: [
+      { id: "route-5-keun-eong", place: "keunEong", dayId: "0925", km: 1.2, stop: "5分钟", note: "大崖海岸散步道的起点，海崖与林荫景观；中秋当日仍以赶路为先。" },
+      { id: "route-5-neop", place: "neopBille", dayId: "0925", km: 9.5, stop: "3分钟", note: "海边熔岩石岸，可顺路看浪与岩面，不为拍照离开官方路标。" }
+    ] },
+    "6": { title: "海岸走进西归浦", intro: "从牛沼河口沿海岸进入旧城，路过海边观景点、李仲燮街与每日偶来市场。", highlights: [
+      { id: "route-6-sora", place: "soraCastle", dayId: "0925", km: 7.4, stop: "盖章＋3分钟", note: "螺之城也是本线中间章；短看海景后继续去旅行者中心。" },
+      { id: "route-6-market", place: "olleMarketEntrance", dayId: "0925", km: 9.6, stop: "路过即可", note: "市场入口在终点前，想吃年糕可结束徒步后再回来，不背补给拖慢进度。" }
+    ] },
+    "7": { title: "水峰路与法还浦口", intro: "沿西归浦南岸走过自然小径与港口；水峰路是由偶来开路人手工修出的海岸路段。", highlights: [
+      { id: "route-7-solbit", place: "solbitBada", dayId: "0926", km: 3.0, stop: "3分钟", note: "沿路看海岸与礁石，不下到湿滑岩面。" },
+      { id: "route-7-beophwan", place: "beophwanPort", dayId: "0926", km: 8.5, stop: "5分钟", note: "法还浦口小歇补水；到终点后还要走15.7 km的7-1。" }
+    ] },
+    "7-1": { title: "内陆火山丘陵", intro: "从客运站走入济州中山间，登高可看汉拿山与南岸，再沿火山口和村道回到旧城。", highlights: [
+      { id: "route-7-1-eongtto", place: "eongttoFalls", dayId: "0926", km: 4.0, stop: "按天气", note: "Eongtto瀑布通常要强降雨后才有水；无水或需绕行时直接走过。" },
+      { id: "route-7-1-hannon", place: "hannonCrater", dayId: "0926", km: 12.5, stop: "3分钟", note: "留意火山口地形与稻田遗迹，靠近终点时不额外爬坡。" }
+    ] },
+    "8": { title: "柱状节理到大坪", intro: "沿深色海岸和中门区域前进，穿过柱状节理一带，最后抵达更安静的大坪村。", highlights: [
+      { id: "route-8-columns", place: "daepoColumns", dayId: "0927", km: 4.9, stop: "5分钟", note: "看熔岩冷却形成的柱状节理；官方路线上顺路观赏，付费观景台另算绕行。" },
+      { id: "route-8-nonjitmul", place: "nonjitmul", dayId: "0927", km: 15.9, stop: "3分钟", note: "海岸淡水与海水交汇的水池一带，休息后继续赶往大坪。" }
+    ] },
+    "10": { title: "山房山与松岳山海岸", intro: "和顺至摹瑟浦一路看山房山、海岸和松岳山；27日先走到中间章，28日接续终点。", highlights: [
+      { id: "route-10-sagye", place: "sagyeVillage", dayId: "0927", km: 4.2, stop: "3分钟", note: "山房山下的四季海岸；27日仍须在计划时间前走到11.4 km中间章。" },
+      { id: "route-10-songak", place: "songaksanView", dayId: "0927", km: 8.9, stop: "5分钟", note: "回望山房山、向海上看加波岛与马罗岛；按官方路标继续向Seotal。" },
+      { id: "route-10-hamo", place: "hamoBeach", dayId: "0928", km: 13.8, stop: "路过即可", note: "续走10号线的最后一段海岸；先盖终点章和确认领证，别为海滩停留误船。" }
+    ] },
+    "10-1": { title: "低矮海岛慢步", intro: "加波岛地势低平，村落、石墙与海岸交替；秋季不要把春天青麦田当成必见景色。", highlights: [
+      { id: "route-10-1-natgol", place: "natGol", dayId: "0928", km: 1.6, stop: "3分钟", note: "沿岛西岸看海与石墙，时间受返船及证书受理截止约束。" },
+      { id: "route-10-1-wangjin", place: "keunWangjin", dayId: "0928", km: 3.4, stop: "3分钟", note: "接近南岸终点的海景点；终点仍需安排回上洞浦口的交通。" }
+    ] }
+  };
+
+  Object.keys(routeGuides).forEach(function (routeId) {
+    routeGuides[routeId].highlights.forEach(function (point) {
+      defaultCheckins.push({ id: point.id, dayId: point.dayId, place: point.place, category: "scenic", priority: "顺路", slot: routeId + "号线 " + point.km.toFixed(1) + " km · " + point.stop, note: point.note, mode: routes[routeId].mode, routeHighlight: true });
+    });
+  });
 
   const days = [
     {
@@ -218,6 +283,7 @@
     defaultCheckins,
     routes,
     stampLocations,
+    routeGuides,
     days,
     confirmations,
     flights,

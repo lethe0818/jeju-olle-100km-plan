@@ -392,6 +392,40 @@
     }).join("") + "</div>";
   }
 
+  function officialCourseUrl(routeId) {
+    const parts = routeId.split("-");
+    parts[0] = parts[0].padStart(2, "0");
+    return "https://www.jejuolle.org/trail#/road/" + parts.join("-");
+  }
+
+  function routeGuidesForDay(day) {
+    const routeIds = day.stampPlan ? day.stampPlan.map(function (plan) { return plan.routeId; }) : day.routeIds;
+    return routeIds.map(function (routeId) {
+      const guide = data.routeGuides[routeId];
+      return guide && { routeId, title: guide.title, intro: guide.intro, points: guide.highlights.filter(function (point) { return point.dayId === day.id; }) };
+    }).filter(Boolean);
+  }
+
+  function renderRouteTeaser(day) {
+    const guides = routeGuidesForDay(day);
+    if (!guides.length) return "";
+    return '<section class="route-teaser"><div class="route-teaser-head"><h3>沿途看点</h3><button class="text-button" type="button" data-view-target="plan">查看路线</button></div>' + guides.map(function (guide) {
+      return '<p><strong>' + htmlEscape(guide.routeId) + '号线 · ' + htmlEscape(guide.title) + '</strong><span>' + guide.points.map(function (point) { return htmlEscape(data.places[point.place].name); }).join(" · ") + '</span></p>';
+    }).join("") + '</section>';
+  }
+
+  function renderRouteGuides(day) {
+    const guides = routeGuidesForDay(day);
+    if (!guides.length) return "";
+    return '<div class="section-heading"><h2>沿途特色与打卡</h2><span>按本线公里标</span></div><div class="route-guide-list">' + guides.map(function (guide) {
+      return '<section class="route-guide"><header class="route-guide-head"><div><strong>' + htmlEscape(guide.routeId) + '号线</strong><h3>' + htmlEscape(guide.title) + '</h3></div><a href="' + htmlEscape(officialCourseUrl(guide.routeId)) + '" target="_blank" rel="noopener" aria-label="查看' + guide.routeId + '号线官方路线介绍">' + icon("external-link.svg") + '官方路线</a></header><p class="route-guide-intro">' + htmlEscape(guide.intro) + '</p><div class="route-highlights">' + guide.points.map(function (point) {
+        const place = data.places[point.place];
+        const checked = Boolean(state.checkinChecks[point.id]);
+        return '<article class="route-highlight ' + (checked ? "completed" : "") + '"><div class="route-highlight-main"><span class="route-highlight-km">' + point.km.toFixed(1) + '<small>KM</small></span><div class="route-highlight-copy"><div class="route-highlight-label"><span>顺路打卡</span><small>' + htmlEscape(point.stop) + '</small></div><h4>' + htmlEscape(place.name) + '</h4><p lang="ko">' + htmlEscape(place.korean) + '</p><p>' + htmlEscape(point.note) + '</p></div><button class="checkin-toggle ' + (checked ? "checked" : "") + '" type="button" data-toggle-checkin="' + htmlEscape(point.id) + '" aria-label="' + (checked ? "取消打卡" : "标记已打卡") + htmlEscape(place.name) + '" title="' + (checked ? "取消打卡" : "标记已打卡") + '">' + icon(checked ? "check.svg" : "bookmark.svg") + '</button></div><div class="route-highlight-actions">' + mapLinks(place, data.routes[guide.routeId].mode, true) + '<span>韩文地名搜索 · 按偶来路标行走</span></div></article>';
+      }).join("") + '</div></section>';
+    }).join("") + '</div>';
+  }
+
   function confirmationsForDay(dayId) {
     return data.confirmations.filter(function (item) { return item.dayId === dayId; });
   }
@@ -417,6 +451,7 @@
       '<div class="day-title-row"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + '</h2><p>' + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK") + "</small></div></div>" +
       '<div class="today-grid"><div class="today-primary">' +
         renderNextCard(day) +
+        renderRouteTeaser(day) +
         renderQuickTimeline(day) +
         (day.cutoff ? '<section class="cutoff-card"><strong>硬截止 · ' + htmlEscape(day.cutoff) + "</strong><p>" + htmlEscape(day.fallback) + '</p><label class="fallback-toggle"><input type="checkbox" data-fallback="' + day.id + '" ' + (state.fallbacks[day.id] ? "checked" : "") + '><span>' + (state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案") + "</span></label></section>" : "") +
         '<div class="data-actions"><button class="secondary-button" type="button" data-view-target="plan">' + icon("calendar-days.svg") + "查看完整时间轴</button></div>" +
@@ -447,8 +482,6 @@
       const locations = data.stampLocations[plan.routeId];
       const note = plan.note || (route.counts ? "计入认证" : "骑行记录");
       const officialImage = "https://contents.ollepass.org/static/homepage/trail/img/road/" + locations.map;
-      const course = route.id.split("-");
-      course[0] = course[0].padStart(2, "0");
       return '<section class="route-stamps"><div class="route-label"><div><strong>' + route.id + '号线</strong><span>' + route.km + " km · " + htmlEscape(note) + '</span></div><a class="stamp-map-link" href="' + htmlEscape(officialImage) + '" target="_blank" rel="noopener" aria-label="查看' + route.id + '号线官方盖章分段图">' + icon("map.svg") + '官方章点图</a></div>' + (locations.hint ? '<p class="stamp-route-hint">' + htmlEscape(locations.hint) + "</p>" : "") + plan.stamps.map(function (stamp) {
         const key = plan.routeId + "-" + stamp;
         const point = locations[stamp];
@@ -458,16 +491,16 @@
           address: "官方图：本线 " + point.km.toFixed(1) + " km 处；请沿现场偶来标识找盖章亭"
         };
         return '<article class="stamp-point"><div class="stamp-point-main"><span class="stamp-km">' + point.km.toFixed(1) + '<small>KM</small></span><div class="stamp-point-text"><span class="stamp-stage">' + labels[stamp] + '章</span><strong lang="ko">' + htmlEscape(point.korean) + '</strong><p>' + htmlEscape(point.note || (nearby ? "导航到附近地标，按官方图和现场路标找章亭" : "未核实章亭精确坐标 · 地名搜索")) + '</p></div><label class="stamp-check"><input type="checkbox" data-stamp="' + key + '" aria-label="' + route.id + '号线' + labels[stamp] + '章已盖" ' + (state.stamps[key] ? "checked" : "") + '><span>已盖</span></label></div>' + mapLinks(place, "步行", true) + '</article>';
-      }).join("") + '<p class="stamp-source">地点及公里标据<a href="https://www.jejuolle.org/trail#/road/' + course.join("-") + '" target="_blank" rel="noopener">济州偶来官方路线页</a>；官方章点图需联网打开，图并非盖章亭实拍。</p></section>';
+      }).join("") + '<p class="stamp-source">地点及公里标据<a href="' + htmlEscape(officialCourseUrl(route.id)) + '" target="_blank" rel="noopener">济州偶来官方路线页</a>；官方章点图需联网打开，图并非盖章亭实拍。</p></section>';
     }).join("") + "</div>";
   }
 
   function renderPlanDay(day, printMode) {
     const totalDistance = day.walkKm + (day.bikeKm || 0);
     const hotel = day.hotel ? data.places[day.hotel] : null;
-    const dayCheckins = checkinsForDay(day.id);
+    const dayCheckins = checkinsForDay(day.id).filter(function (item) { return !item.routeHighlight; });
     return '<article class="' + (printMode ? "print-day" : "plan-day") + '"><header class="plan-day-header"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + "</h2><p>" + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? "WALK + BIKE" : "KM WALK") + "</small></div></header>" +
-      '<div class="plan-layout"><div>' + renderTimeline(day) +
+      '<div class="plan-layout"><div>' + renderRouteGuides(day) + renderTimeline(day) +
       (day.cutoff ? '<section class="cutoff-card"><strong>硬截止 · ' + htmlEscape(day.cutoff) + "</strong><p>" + htmlEscape(day.fallback) + '</p><label class="fallback-toggle"><input type="checkbox" data-fallback="' + day.id + '" ' + (state.fallbacks[day.id] ? "checked" : "") + '><span>' + (state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案") + "</span></label></section>" : "") +
       renderStamps(day) +
       (dayCheckins.length ? '<div class="section-heading"><h2>当天打卡点</h2><span>' + dayCheckins.length + ' 个</span></div><div class="checkin-list">' + dayCheckins.map(renderCheckinCard).join("") + "</div>" : "") +
@@ -495,7 +528,7 @@
       '<div class="checkin-meta"><span>' + htmlEscape(day.date) + "</span><span>" + htmlEscape(item.priority || "想去") + "</span>" + (item.slot ? "<span>" + htmlEscape(item.slot) + "</span>" : "") + "</div>" +
       (detail ? '<p class="checkin-detail">' + htmlEscape(detail) + "</p>" : "") +
       (place.address ? '<p class="place-address"><b>' + htmlEscape(place.korean || place.name) + "</b> · " + htmlEscape(place.address) + "</p>" : "") +
-      (!hasCoordinates(place) ? '<p class="location-warning">定位待补充：地图将先打开搜索结果。</p>' : "") +
+      (!hasCoordinates(place) ? '<p class="location-warning">' + (item.routeHighlight ? "按韩文地名搜索：具体位置以官方线路图和现场路标为准。" : "定位待补充：地图将先打开搜索结果。") + '</p>' : "") +
       '<div class="checkin-card-actions">' + mapLinks(place, item.mode, true) +
       (item.custom ? '<div class="custom-actions"><button type="button" data-edit-checkin="' + htmlEscape(item.id) + '" aria-label="编辑' + htmlEscape(place.name) + '" title="编辑">' + icon("pencil.svg") + '</button><button class="delete-action" type="button" data-delete-checkin="' + htmlEscape(item.id) + '" aria-label="删除' + htmlEscape(place.name) + '" title="删除">' + icon("trash-2.svg") + "</button></div>" : "") +
       "</div></article>";

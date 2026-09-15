@@ -35,6 +35,57 @@ async function waitForAppWorker(page) {
 test.beforeAll(async () => { testServer = await startStaticServer(4183); });
 test.afterAll(async () => { await closeServer(testServer); });
 
+test("route features and scenic check-ins stay in walking order and share progress", async ({ page }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url);
+  await page.getByRole("button", { name: "计划" }).click();
+  await page.locator('#view-plan [data-day="0924"]').click();
+  await expect(page.locator("#plan-content .route-guide")).toHaveCount(2);
+  await expect(page.locator("#plan-content .route-highlight")).toHaveCount(4);
+  await expect(page.locator("#plan-content .route-guide-head a").first()).toHaveAttribute("href", "https://www.jejuolle.org/trail#/road/01");
+  await expect(page.locator("#plan-content .route-highlight", { hasText: "马头岳" }).locator(".map-button").first()).toHaveAttribute("href", /map\.kakao\.com\/link\/search/);
+  await expect(page.locator('#plan-content [data-toggle-checkin="route-1-malmi"] img')).toHaveAttribute("src", /bookmark\.svg$/);
+  await page.locator("#plan-content .route-guide-list").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/route-guides-390.png" });
+  await page.locator('#plan-content [data-toggle-checkin="route-1-malmi"]').click();
+  await expect(page.locator('#plan-content [data-toggle-checkin="route-1-malmi"] img')).toHaveAttribute("src", /check\.svg$/);
+  await page.getByRole("button", { name: "打卡", exact: true }).click();
+  await page.locator('#checkin-category-filter [data-filter-category="scenic"]').click();
+  await expect(page.locator('#checkin-list .checkin-card.completed', { hasText: "马头岳" })).toBeVisible();
+  await page.reload();
+  await expect(page.locator('#checkin-list .checkin-card.completed', { hasText: "马头岳" })).toBeVisible();
+  await expect(page.locator('#checkin-list .checkin-card.completed', { hasText: "马头岳" }).locator(".location-warning")).toContainText("按韩文地名搜索");
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v4")).checkinChecks["route-1-malmi"])).toBe(true);
+  await page.getByRole("button", { name: "今日", exact: true }).click();
+  await expect(page.locator("#today-content .route-teaser")).toContainText("山丘到海岸");
+  await page.locator("#today-content .route-teaser").scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "test-results/route-teaser-today-390.png" });
+  await page.getByRole("button", { name: "计划" }).click();
+  await page.locator('#view-plan [data-day="0927"]').click();
+  await expect(page.locator("#plan-content .route-highlight")).toHaveCount(4);
+  await expect(page.locator("#plan-content .route-highlight", { hasText: "下摹海滩" })).toHaveCount(0);
+  await page.locator('#view-plan [data-day="0928"]').click();
+  await expect(page.locator("#plan-content .route-highlight")).toHaveCount(3);
+  await expect(page.locator("#plan-content .route-highlight", { hasText: "下摹海滩" })).toBeVisible();
+  const guideData = await page.evaluate(() => window.TRIP_DATA.routeGuides);
+  expect(Object.keys(guideData)).toHaveLength(9);
+  for (const guide of Object.values(guideData)) {
+    expect(guide.highlights.map(point => point.km)).toEqual(guide.highlights.map(point => point.km).sort((a, b) => a - b));
+  }
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.locator("#plan-content .route-guide-list").scrollIntoViewIfNeeded();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    if (width !== 390) await page.screenshot({ path: `test-results/route-guides-${width}.png` });
+  }
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator("#plan-content .route-highlight")).toHaveCount(3);
+  expect(errors).toEqual([]);
+});
+
 test("official stamp locations, split route 10, and two-stamp Gapado course", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(url);
