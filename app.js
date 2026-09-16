@@ -6,6 +6,7 @@
   const LEGACY_V4_STORAGE_KEY = "jeju-olle-plan-v4";
   const LEGACY_STORAGE_KEY = "jeju-olle-plan-v3";
   const RECOVERY_KEY = "jeju-olle-plan-v5-recovery";
+  const LEGACY_EXECUTION_FOCUS_KEY = "jeju-olle-execution-focus-reset-v1";
   const WEATHER_CACHE_KEY = "jeju-olle-weather-v1";
   const WEATHER_REFRESH_MS = 25 * 60 * 1000;
   const WEATHER_REGIONS = {
@@ -227,7 +228,7 @@
   function loadState() {
     try {
       const current = readStoredState(STORAGE_KEY);
-      if (current && current.version === 5) return normalizeState(current);
+      if (current && current.version === 5) return clearLegacyExecutionFocus(normalizeState(current));
       const version4 = readStoredState(LEGACY_V4_STORAGE_KEY);
       if (version4 && version4.version === 4) {
         const migrated = migrateV4(version4);
@@ -244,6 +245,30 @@
       console.info("未读取到有效的本地行程，将使用默认数据。", error.message);
     }
     return defaultState();
+  }
+
+  function clearLegacyExecutionFocus(currentState) {
+    try {
+      if (localStorage.getItem(LEGACY_EXECUTION_FOCUS_KEY) === "1") return currentState;
+      const executions = currentState.executions || {};
+      const hasActiveExecution = Object.values(executions).some(function (execution) {
+        return execution && execution.status === "active";
+      });
+      if (hasActiveExecution) {
+        currentState = normalizeState(Object.assign({}, currentState, {
+          activeView: "today",
+          executions: Object.fromEntries(Object.entries(executions).map(function (entry) {
+            const execution = entry[1];
+            return [entry[0], execution && execution.status === "active" ? Object.assign({}, execution, { status: "not-started", activeStepId: "" }) : execution];
+          }))
+        }));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState));
+      }
+      localStorage.setItem(LEGACY_EXECUTION_FOCUS_KEY, "1");
+    } catch (error) {
+      // A storage failure should never prevent the trip plan from opening.
+    }
+    return currentState;
   }
 
   function saveState() {

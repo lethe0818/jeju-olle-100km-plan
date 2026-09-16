@@ -56,6 +56,7 @@ async function activateExecution(page, dayId) {
       finishedAt: ""
     };
     localStorage.setItem("jeju-olle-plan-v5", JSON.stringify(state));
+    localStorage.setItem("jeju-olle-execution-focus-reset-v1", "1");
   }, dayId);
   await page.reload();
 }
@@ -141,6 +142,35 @@ test("weather outside the 16-day horizon stays explicitly unavailable", async ({
   await page.locator('#view-today [data-day="0928"]').click();
   await expect(page.locator("#weather-panel")).toContainText("尚未进入 16 天预报范围");
   expect(weatherRequests.some(url => new URL(url).searchParams.get("latitude") === "33.2096928")).toBe(false);
+});
+
+test("legacy active execution focus is dismissed once while progress stays saved", async ({ page }) => {
+  await page.goto(url);
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("jeju-olle-plan-v5")) || {
+      version: 5, activeView: "today", activeDay: "0924", compact: false, notes: "",
+      dayNotes: {}, stamps: {}, checkinChecks: {}, customCheckins: [], expenses: [],
+      confirmations: {}, fallbacks: {}, executions: {}
+    };
+    const day = window.TRIP_DATA.days.find(item => item.id === "0924");
+    state.activeView = "today";
+    state.activeDay = "0924";
+    state.executions["0924"] = {
+      status: "active",
+      activeStepId: day.timeline[1].id,
+      stepStates: { [day.timeline[0].id]: { done: true } },
+      startedAt: "2026-09-24T00:00:00.000Z",
+      finishedAt: ""
+    };
+    localStorage.setItem("jeju-olle-plan-v5", JSON.stringify(state));
+    localStorage.removeItem("jeju-olle-execution-focus-reset-v1");
+  });
+  await page.reload();
+  await expect(page.locator(".execution-current")).toHaveCount(0);
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(saved.executions["0924"].status).toBe("not-started");
+  expect(saved.executions["0924"].activeStepId).toBe("");
+  expect(saved.executions["0924"].stepStates["0924-step-01"]).toEqual({ done: true });
 });
 
 test("merged today-action map buttons are white and legible on mobile and desktop", async ({ page }) => {
@@ -985,7 +1015,7 @@ test("GitHub Pages subdirectory keeps install scope and offline walk-mode state"
     });
     expect(config.scope).toBe(subpathUrl);
     expect(config.start).toBe(subpathUrl);
-    expect(config.caches).toContain("jeju-olle-app-v5-ux-20260916-12");
+    expect(config.caches).toContain("jeju-olle-app-v5-ux-20260916-13");
     await page.locator('#view-today [data-day="0924"]').click();
     await activateExecution(page, "0924");
     await context.setOffline(true);
