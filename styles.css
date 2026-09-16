@@ -241,12 +241,11 @@ img { display: block; max-width: 100%; }
 .today-action-top > div { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; }
 .today-action-card .next-label { color: var(--accent-on-dark); font: 800 11px var(--mono); }
 .today-action-card time { color: white; font: 850 28px/1 var(--mono); }
-.today-action-heading { margin-top: 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 16px; }
+.today-action-heading { margin-top: 12px; display: block; }
 .today-action-heading h3, .today-action-finished h3 { margin: 0; font-size: 20px; line-height: 1.25; text-wrap: pretty; }
 .today-action-heading p, .today-action-finished p { margin: 4px 0 0; color: rgba(255,255,255,.72); font-size: 12px; text-wrap: pretty; }
 .today-action-finished p { color: var(--muted); }
-.today-start-button { min-width: 124px; min-height: 46px; padding: 0 15px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--action); border-radius: var(--radius-sm); color: white; background: var(--action); font-size: 12px; font-weight: 800; }
-.today-start-button img, .today-action-finished .primary-button img { width: 16px; height: 16px; filter: brightness(0) invert(1); }
+.today-action-finished .primary-button img { width: 16px; height: 16px; filter: brightness(0) invert(1); }
 .today-action-card .map-actions { margin-top: 12px; }
 .today-action-card .map-button { color: var(--ocean-deep); border-color: white; background: white; }
 .today-action-metrics { margin-top: 15px; padding-top: 12px; display: grid; grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(0, .7fr)); border-top: 1px solid rgba(255,255,255,.18); }
@@ -334,6 +333,10 @@ body[data-execution-focus="true"] .today-shell { padding-top: 14px; }
 .execution-current.all-done .primary-button { align-self: flex-start; margin-top: 18px; background: var(--action); border-color: var(--action); }
 .execution-section-label { min-height: 26px; display: flex; align-items: center; gap: 7px; color: var(--ocean-deep); font-size: 11px; font-weight: 800; text-transform: uppercase; }
 .execution-section-label > img { width: 16px; height: 16px; }
+.execution-current .execution-section-label { color: var(--accent-on-dark); }
+.execution-current .execution-section-label > img,
+.hotel-card .map-button img,
+.plan-section-nav .plan-current-step img { filter: brightness(0) invert(1); }
 .execution-section-label > a { min-height: 44px; margin-left: auto; display: inline-flex; align-items: center; color: var(--ocean-deep); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
 .execution-stamp {
   padding: 15px 16px;
@@ -1170,9 +1173,7 @@ body[data-density="compact"] .section-heading { margin-top: 21px; }
   .day-title-row h2 { font-size: 23px; }
   .today-action-card { padding: 16px; }
   .today-action-card time { font-size: 25px; }
-  .today-action-heading { grid-template-columns: 1fr; gap: 12px; }
   .today-action-heading h3 { font-size: 18px; }
-  .today-start-button { justify-self: start; }
   .today-action-metrics { grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, .7fr)); }
   .today-action-metrics > div { padding: 0 7px; }
   .today-action-metrics strong { font-size: 11px; }

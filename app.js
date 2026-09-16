@@ -909,7 +909,7 @@
       return '<section class="today-action-card finished"><div class="today-action-finished"><div><span class="execution-kicker">DAY CLOSED</span><h3>今日执行已结束</h3><p>完成 ' + done + " / " + day.timeline.length + ' 个步骤，进度和章点均已保存。</p></div><button class="primary-button" type="button" data-reopen-execution="' + day.id + '">重新打开</button></div>' + renderTodayActionMetrics(day, cutoff, checkedStamps, dayStamps.length, km) + "</section>";
     }
     const place = data.places[day.next.place];
-    return '<section class="today-action-card"><div class="today-action-top"><div><span class="next-label">WALK MODE · NEXT ACTION</span><time>' + htmlEscape(day.next.time) + '</time></div><span class="mode-badge">' + htmlEscape(day.next.mode) + '</span></div><div class="today-action-heading"><div><h3>' + htmlEscape(day.next.title) + '</h3><p>' + htmlEscape(day.next.detail) + '</p></div><button class="today-start-button" type="button" data-start-execution="' + day.id + '">' + icon("navigation.svg") + (done ? "继续此日" : "开始此日") + "</button></div>" + (place ? mapLinks(place, day.next.mode) : "") + renderTodayActionMetrics(day, cutoff, checkedStamps, dayStamps.length, km) + "</section>";
+    return '<section class="today-action-card"><div class="today-action-top"><div><span class="next-label">NEXT ACTION</span><time>' + htmlEscape(day.next.time) + '</time></div><span class="mode-badge">' + htmlEscape(day.next.mode) + '</span></div><div class="today-action-heading"><div><h3>' + htmlEscape(day.next.title) + '</h3><p>' + htmlEscape(day.next.detail) + '</p></div></div>' + (place ? mapLinks(place, day.next.mode) : "") + renderTodayActionMetrics(day, cutoff, checkedStamps, dayStamps.length, km) + "</section>";
   }
 
   function renderTodayActionMetrics(day, cutoff, checkedStamps, totalStamps, km) {
@@ -1849,11 +1849,6 @@
       if (timelineSummary) executionTimelineOpen = !timelineSummary.parentElement.open;
       const riskSummary = event.target.closest(".execution-risk-details > summary");
       if (riskSummary) executionRiskOpen = !riskSummary.parentElement.open;
-      const startExecutionButton = event.target.closest("[data-start-execution]");
-      if (startExecutionButton) {
-        startExecution(startExecutionButton.dataset.startExecution);
-        return;
-      }
       const reopenExecutionButton = event.target.closest("[data-reopen-execution]");
       if (reopenExecutionButton) {
         startExecution(reopenExecutionButton.dataset.reopenExecution);

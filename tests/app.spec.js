@@ -37,6 +37,29 @@ async function waitForAppWorker(page) {
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
 }
 
+async function activateExecution(page, dayId) {
+  await page.evaluate(dayId => {
+    const state = JSON.parse(localStorage.getItem("jeju-olle-plan-v5")) || {
+      version: 5, activeView: "today", activeDay: dayId, compact: false, notes: "",
+      dayNotes: {}, stamps: {}, checkinChecks: {}, customCheckins: [], expenses: [],
+      confirmations: {}, fallbacks: {}, executions: {}
+    };
+    const day = window.TRIP_DATA.days.find(item => item.id === dayId);
+    state.executions = state.executions || {};
+    state.activeView = "today";
+    state.activeDay = dayId;
+    state.executions[dayId] = {
+      status: "active",
+      activeStepId: day.timeline[0].id,
+      stepStates: {},
+      startedAt: "2026-09-24T00:00:00.000Z",
+      finishedAt: ""
+    };
+    localStorage.setItem("jeju-olle-plan-v5", JSON.stringify(state));
+  }, dayId);
+  await page.reload();
+}
+
 test.beforeAll(async () => { testServer = await startStaticServer(4183); });
 test.afterAll(async () => { await closeServer(testServer); });
 
@@ -140,6 +163,33 @@ test("merged today-action map buttons are white and legible on mobile and deskto
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
     if (width !== 1440) await page.screenshot({ path: `test-results/next-card-white-buttons-${width}.png` });
   }
+});
+
+test("icons on dark surfaces use the white stroke treatment", async ({ page }) => {
+  await page.goto(url);
+  await page.getByRole("button", { name: "计划" }).click();
+  const hotelIcons = await page.locator(".hotel-card .map-button img").evaluateAll(elements => elements.map(element => getComputedStyle(element).filter));
+  expect(hotelIcons.length).toBeGreaterThan(0);
+  expect(hotelIcons.every(filter => filter.includes("invert(1)"))).toBe(true);
+
+  await activateExecution(page, "0924");
+  await page.getByRole("button", { name: "计划" }).click();
+  const currentStepIcons = await page.locator(".plan-section-nav .plan-current-step img").evaluateAll(elements => elements.map(element => getComputedStyle(element).filter));
+  expect(currentStepIcons).toHaveLength(1);
+  expect(currentStepIcons[0]).toContain("invert(1)");
+
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("jeju-olle-plan-v5"));
+    const day = window.TRIP_DATA.days.find(item => item.id === "0924");
+    state.activeView = "today";
+    state.stamps = Object.fromEntries(["1-start", "1-middle", "1-end", "1-1-start", "1-1-middle", "1-1-end"].map(key => [key, true]));
+    state.executions["0924"].stepStates = Object.fromEntries(day.timeline.map(item => [item.id, { done: true }]));
+    state.executions["0924"].activeStepId = "";
+    localStorage.setItem("jeju-olle-plan-v5", JSON.stringify(state));
+  });
+  await page.reload();
+  const completionIcon = await page.locator(".execution-current.all-done .execution-section-label img").evaluate(element => getComputedStyle(element).filter);
+  expect(completionIcon).toContain("invert(1)");
 });
 
 test("route features and scenic check-ins stay in walking order and share progress", async ({ page }) => {
@@ -545,8 +595,8 @@ test("walk mode advances manually, resumes, goes back, finishes and reopens", as
   await page.route("https://api.open-meteo.com/v1/forecast?**", route => route.abort());
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(url);
-  await expect(page.locator("[data-start-execution='0924']")).toBeVisible();
-  await page.locator("[data-start-execution='0924']").click();
+  await expect(page.locator("[data-start-execution='0924']")).toHaveCount(0);
+  await activateExecution(page, "0924");
   await expect(page.locator("#today-overview")).toBeHidden();
   await expect(page.locator("#today-day-tabs")).toBeHidden();
   await expect(page.locator(".execution-current")).toContainText("退房，步行前往济州客运站");
@@ -581,7 +631,7 @@ test("walk mode advances manually, resumes, goes back, finishes and reopens", as
 test("stamp-linked route steps require all stamps and next stamp follows day order", async ({ page }) => {
   await page.clock.install({ time: new Date("2026-09-24T00:00:00Z") });
   await page.goto(url);
-  await page.locator("[data-start-execution='0924']").click();
+  await activateExecution(page, "0924");
   for (let index = 0; index < 4; index++) await page.locator("[data-complete-step]").click();
   await expect(page.locator(".execution-current")).toContainText("1号线 · 始兴里");
   await page.locator("[data-complete-step]").click();
@@ -610,7 +660,7 @@ test("stamp-linked route steps require all stamps and next stamp follows day ord
 test("Jeju clock suggests without advancing and cutoff changes tone at 60 minutes", async ({ page }) => {
   await page.clock.install({ time: new Date("2026-09-24T00:00:00Z") });
   await page.goto(url);
-  await page.locator("[data-start-execution='0924']").click();
+  await activateExecution(page, "0924");
   await expect(page.locator(".execution-current")).toContainText("退房，步行前往济州客运站");
   await expect(page.locator(".execution-suggestion")).toContainText("1号线 · 始兴里");
   await expect(page.locator(".execution-cutoff")).toHaveClass(/overdue/);
@@ -643,7 +693,7 @@ test("on-demand location reports straight-line distance and accuracy without per
   const page = await context.newPage();
   await page.goto(url);
   await page.locator('#view-today [data-day="0924"]').click();
-  await page.locator("[data-start-execution='0924']").click();
+  await activateExecution(page, "0924");
   await expect(page.locator(".execution-location")).toContainText("点击后仅申请一次位置权限");
   await page.locator("[data-update-execution-location]").click();
   await expect(page.locator(".execution-location")).toContainText("直线约 0 m");
@@ -676,7 +726,7 @@ test("location denial and timeout are visible, and unverified stamp has no dista
   });
   await page.goto(url);
   await page.locator('#view-today [data-day="0924"]').click();
-  await page.locator("[data-start-execution='0924']").click();
+  await activateExecution(page, "0924");
   await page.locator("[data-update-execution-location]").click();
   await expect(page.locator(".execution-location")).toContainText("定位权限被拒绝");
   await page.evaluate(() => {
@@ -698,7 +748,7 @@ test("late location response is ignored after changing day and initial day uses 
   });
   await page.goto(url);
   await expect(page.locator('#view-today [data-day="0924"]')).toHaveAttribute("aria-selected", "true");
-  await page.locator("[data-start-execution='0924']").click();
+  await activateExecution(page, "0924");
   await page.locator("[data-update-execution-location]").click();
   await expect(page.locator(".execution-location")).toContainText("正在获取当前位置");
   await page.getByRole("button", { name: "计划" }).click();
@@ -737,7 +787,7 @@ test("version 4 migration and version 5 backup retain trip data and validate ste
   expect(stored.confirmations["amantov-luggage"]).toBe(true);
   expect(stored.fallbacks["0927"]).toBe(true);
   expect(stored.executions).toEqual({});
-  await page.locator("[data-start-execution='0927']").click();
+  await activateExecution(page, "0927");
   await page.locator("[data-complete-step]").click();
   await expect(page.locator(".execution-fallback")).toContainText("当天只完成8号线");
   await expect(page.locator(".execution-timeline-item")).toHaveCount(7);
@@ -768,7 +818,7 @@ test("focused layout remains readable at phone, tablet and desktop sizes and pri
   await page.clock.install({ time: new Date("2026-09-27T00:00:00Z") });
   await page.goto(url);
   await page.locator('#view-today [data-day="0927"]').click();
-  await page.locator("[data-start-execution='0927']").click();
+  await activateExecution(page, "0927");
   for (const width of [390, 768, 1440]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await expect(page.locator(".execution-current")).toBeVisible();
@@ -791,6 +841,8 @@ test("merged today card, plan anchors and quick check-in stay usable on mobile",
   await page.locator('#view-today [data-day="0924"]').click();
   const action = page.locator(".today-action-card");
   await expect(action).toContainText("New Star Hotel → Playce寄存行李");
+  await expect(action).toContainText("NEXT ACTION");
+  await expect(action.locator("[data-start-execution]")).toHaveCount(0);
   await expect(action).toContainText("最近截止");
   await expect(action).toContainText("当天盖章");
   await expect(action).toContainText("认证进度");
@@ -850,7 +902,7 @@ test("search combines date and category and completed matches stay discoverable"
 test("timeline selection never completes skipped steps and stamp undo restores auto-advanced route", async ({ page }) => {
   await page.clock.install({ time: new Date("2026-09-24T00:00:00Z") });
   await page.goto(url);
-  await page.locator("[data-start-execution='0924']").click();
+  await activateExecution(page, "0924");
   await page.locator(".execution-timeline summary").click();
   await page.locator('[data-select-execution-step="0924-step-08"]').click();
   await expect(page.locator(".execution-current")).toContainText("乘船前往牛岛");
@@ -883,7 +935,7 @@ test("risk details stay collapsed in preview and expand for urgent cutoff or wea
   await page.route("https://api.open-meteo.com/v1/forecast?**", route => route.abort());
   await page.goto(url);
   await page.locator('#view-today [data-day="0924"]').click();
-  await page.locator("[data-start-execution='0924']").click();
+  await activateExecution(page, "0924");
   await expect(page.locator(".execution-statusbar")).toContainText("9/24 08:05");
   await expect(page.locator(".execution-risk-details")).not.toHaveAttribute("open", "");
   await page.clock.setFixedTime(new Date("2026-09-23T22:20:00Z"));
@@ -909,7 +961,7 @@ test("high rain or gust expands weather detail and refresh can collapse it", asy
     })
   }));
   await page.goto(url);
-  await page.locator("[data-start-execution='0924']").click();
+  await activateExecution(page, "0924");
   await expect(page.locator(".execution-statusbar")).toContainText("雨 80%");
   await expect(page.locator(".execution-risk-details")).toHaveAttribute("open", "");
   highRisk = false;
@@ -933,9 +985,9 @@ test("GitHub Pages subdirectory keeps install scope and offline walk-mode state"
     });
     expect(config.scope).toBe(subpathUrl);
     expect(config.start).toBe(subpathUrl);
-    expect(config.caches).toContain("jeju-olle-app-v5-ux-20260915-11");
+    expect(config.caches).toContain("jeju-olle-app-v5-ux-20260916-12");
     await page.locator('#view-today [data-day="0924"]').click();
-    await page.locator("[data-start-execution='0924']").click();
+    await activateExecution(page, "0924");
     await context.setOffline(true);
     await page.reload();
     await expect(page.locator(".execution-current")).toContainText("退房，步行前往济州客运站");
