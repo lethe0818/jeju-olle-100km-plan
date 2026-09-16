@@ -222,6 +222,27 @@ test("icons on dark surfaces use the white stroke treatment", async ({ page }) =
   expect(completionIcon).toContain("invert(1)");
 });
 
+test("stamp and check-in completion show a dismissible celebration", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(url);
+  await page.getByRole("button", { name: "计划" }).click();
+  await page.locator('#view-plan [data-day="0924"]').click();
+  await page.locator('[data-stamp="1-start"]').check();
+  const celebration = page.locator("#celebration-layer");
+  await expect(celebration).toBeVisible();
+  await expect(celebration).toContainText("章已收入护照");
+  await expect(celebration).toContainText("1号线起点章");
+  await expect(celebration).toHaveCSS("pointer-events", "none");
+  await expect(celebration).toBeHidden({ timeout: 3000 });
+
+  await page.locator("#plan-content .route-guide-summary").click();
+  await page.locator('[data-toggle-checkin="route-1-malmi"]').click();
+  await expect(celebration).toBeVisible();
+  await expect(celebration).toContainText("这一站已加入旅程");
+  await expect(celebration).toContainText("马头岳");
+  await expect(celebration.locator(".celebration-checkin .celebration-seal img")).toHaveAttribute("src", /map-pin-check\.svg$/);
+});
+
 test("route features and scenic check-ins stay in walking order and share progress", async ({ page }) => {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
@@ -1015,7 +1036,7 @@ test("GitHub Pages subdirectory keeps install scope and offline walk-mode state"
     });
     expect(config.scope).toBe(subpathUrl);
     expect(config.start).toBe(subpathUrl);
-    expect(config.caches).toContain("jeju-olle-app-v5-ux-20260916-13");
+    expect(config.caches).toContain("jeju-olle-app-v5-ux-20260916-14");
     await page.locator('#view-today [data-day="0924"]').click();
     await activateExecution(page, "0924");
     await context.setOffline(true);

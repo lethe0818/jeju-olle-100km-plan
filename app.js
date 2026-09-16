@@ -41,6 +41,7 @@
   let deletedExpense = null;
   let lastStampAction = null;
   let toastTimer = null;
+  let celebrationTimer = null;
   let printRestore = null;
   let executionLocation = null;
   let executionLocationError = "";
@@ -1365,6 +1366,35 @@
     }, durationMs || (actionLabel ? 5000 : 2300));
   }
 
+  function showCelebration(kind, label, detail) {
+    const layer = document.getElementById("celebration-layer");
+    if (!layer) return;
+    window.clearTimeout(celebrationTimer);
+    const isStamp = kind === "stamp";
+    const sparkPositions = [
+      { x: "-136px", y: "-22px", r: "-24deg", tone: "coral" },
+      { x: "-108px", y: "28px", r: "18deg", tone: "gold" },
+      { x: "-44px", y: "-48px", r: "-8deg", tone: "teal" },
+      { x: "58px", y: "-48px", r: "20deg", tone: "gold" },
+      { x: "114px", y: "-18px", r: "-18deg", tone: "coral" },
+      { x: "138px", y: "30px", r: "28deg", tone: "teal" },
+      { x: "84px", y: "50px", r: "-16deg", tone: "coral" },
+      { x: "-80px", y: "50px", r: "12deg", tone: "gold" }
+    ];
+    const sparks = sparkPositions.map(function (spark) {
+      return '<i class="celebration-spark ' + spark.tone + '" style="--spark-x:' + spark.x + ';--spark-y:' + spark.y + ';--spark-r:' + spark.r + '"></i>';
+    }).join("");
+    const title = isStamp ? "章已收入护照" : "这一站已加入旅程";
+    const kicker = isStamp ? "PASSPORT MOMENT" : "TRIP MEMORY";
+    const copy = detail || (isStamp ? "继续沿着海岸向前" : "把喜欢的地方记下来");
+    layer.innerHTML = '<div class="celebration-card celebration-' + (isStamp ? "stamp" : "checkin") + '">' + sparks + '<div class="celebration-seal">' + icon(isStamp ? "award.svg" : "map-pin-check.svg") + '</div><div class="celebration-copy"><span>' + kicker + '</span><strong>' + title + '</strong><p>' + htmlEscape(label) + ' · ' + htmlEscape(copy) + '</p></div></div>';
+    layer.hidden = false;
+    celebrationTimer = window.setTimeout(function () {
+      layer.hidden = true;
+      layer.innerHTML = "";
+    }, 1900);
+  }
+
   function populateCheckinDayOptions() {
     document.getElementById("checkin-day").innerHTML = data.days.map(function (day) {
       return '<option value="' + day.id + '">' + htmlEscape(day.date + " · " + day.label) + "</option>";
@@ -1971,9 +2001,13 @@
         const routeDetails = toggleCheckin.closest("[data-route-disclosure]");
         if (routeDetails && routeDetails.open) openRouteDetails.add(routeDetails.dataset.routeDisclosure);
         const id = toggleCheckin.dataset.toggleCheckin;
-        state.checkinChecks[id] = !state.checkinChecks[id];
+        const checked = !state.checkinChecks[id];
+        const item = combinedCheckins().find(function (current) { return current.id === id; });
+        const place = item ? placeForCheckin(item) : null;
+        state.checkinChecks[id] = checked;
         saveState();
         renderAll();
+        if (checked && place) showCelebration("checkin", place.name, item && item.category === "scenic" ? "值得停下来看看" : "记下这一站");
         return;
       }
       const editCheckin = event.target.closest("[data-edit-checkin]");
@@ -2091,6 +2125,7 @@
         if (checked) {
           lastStampAction = Object.assign({ key, autoAdvanced: Boolean(execution && linkedStepActive && !linkedStepDone && context.stepId && isStepDone(execution, context.stepId)) }, context);
           showToast("已记录“" + context.label + "”", "撤销", "undo-stamp", 8000);
+          showCelebration("stamp", context.label, "继续向下一枚章出发");
         } else if (lastStampAction && lastStampAction.key === key) {
           lastStampAction = null;
         }
