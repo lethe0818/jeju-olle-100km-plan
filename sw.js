@@ -1,9 +1,10 @@
-const CACHE_NAME = "jeju-olle-app-v5-ux-20260916-14";
+const CACHE_NAME = "jeju-olle-app-v5-journey-20260921-1";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./data.js",
+  "./trip-logic.js",
   "./app.js",
   "./manifest.webmanifest",
   "./assets/jeju-olle-coast.jpg",

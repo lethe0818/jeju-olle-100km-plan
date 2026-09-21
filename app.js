@@ -2,6 +2,7 @@
   "use strict";
 
   const data = window.TRIP_DATA;
+  const tripLogic = window.TripLogic;
   const STORAGE_KEY = "jeju-olle-plan-v5";
   const LEGACY_V4_STORAGE_KEY = "jeju-olle-plan-v4";
   const LEGACY_STORAGE_KEY = "jeju-olle-plan-v3";
@@ -50,6 +51,17 @@
   let executionTimelineOpen = false;
   let executionRiskOpen = false;
   let completedCheckinsOpen = false;
+  const manualStepByDay = {};
+  const viewScroll = {};
+  const recentCheckins = new Set();
+  const openStampDays = new Set();
+  const openRiskDays = new Set();
+  const openOtherCutoffDays = new Set();
+  let lastVisitAction = null;
+  let recentlyStamped = "";
+  let offlineShellReady = false;
+  let lastBackupAt = "";
+  try { lastBackupAt = localStorage.getItem("jeju-olle-last-backup") || ""; } catch (error) { /* Optional device metadata. */ }
   const openRouteDetails = new Set();
   const weatherCache = loadWeatherCache();
   const weatherPending = new Set();
@@ -78,6 +90,7 @@
       expenses: [],
       confirmations: {},
       fallbacks: {},
+      cutoffChecks: {},
       executions: {}
     };
   }
@@ -194,6 +207,7 @@
       expenses: Array.isArray(raw.expenses) ? raw.expenses.slice(0, 2000).map(sanitizeExpense).filter(Boolean) : [],
       confirmations: cleanBooleanMap(raw.confirmations, 100),
       fallbacks: cleanBooleanMap(raw.fallbacks, 100),
+      cutoffChecks: cleanBooleanMap(raw.cutoffChecks, 100),
       executions: sanitizeExecutions(raw.executions)
     };
   }
@@ -229,7 +243,7 @@
   function loadState() {
     try {
       const current = readStoredState(STORAGE_KEY);
-      if (current && current.version === 5) return clearLegacyExecutionFocus(normalizeState(current));
+      if (current && current.version === 5) return normalizeState(current);
       const version4 = readStoredState(LEGACY_V4_STORAGE_KEY);
       if (version4 && version4.version === 4) {
         const migrated = migrateV4(version4);
@@ -364,6 +378,16 @@
     const status = offset < 0 || offset > 15 ? "" : loading ? "更新中" : !navigator.onLine ? (cached ? "离线 · 上次更新" : "离线") : weatherErrors[dayId] ? (cached ? "更新失败 · 上次更新" : "更新失败") : cached ? "更新于" : "";
     content.innerHTML += '<div class="weather-meta"><span>' + (cached && status ? status + " " + htmlEscape(weatherUpdatedAt(cached.fetchedAt)) : status) + '</span><a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener">Open-Meteo</a></div>' +
       ((dayId === "0924" || dayId === "0928") ? '<p class="weather-ferry-note">船班运行仍以码头公告为准</p>' : "");
+    const summary = document.querySelector("[data-risk-weather]");
+    if (summary) summary.textContent = message || weatherDescription(cached.forecast.code) + " · 雨 " + weatherNumber(cached.forecast.rain, "%") + " · 阵风 " + weatherNumber(cached.forecast.gust, " km/h") + (status !== "更新于" ? " · " + status : "");
+    const risk = document.querySelector(".today-risk");
+    if (risk) {
+      const groups = tripLogic.cutoffGroups(dayById(dayId), state, Date.now());
+      const highWeather = !message && hasHighWeatherRisk(dayId);
+      risk.classList.toggle("warning", highWeather || Boolean(groups.next && groups.next.tone === "warning"));
+      risk.classList.toggle("overdue", groups.overdue.length > 0);
+      risk.open = openRiskDays.has(dayId) || highWeather || groups.overdue.length > 0 || Boolean(groups.next && groups.next.tone === "warning");
+    }
   }
 
   function refreshWeather(force) {
@@ -412,7 +436,6 @@
       window.clearTimeout(timeout);
       weatherPending.delete(dayId);
       if (state.activeDay === dayId) {
-        if (state.activeView === "today" && executionForDay(dayId, false).status === "active") renderToday();
         renderWeather();
       }
     });
@@ -430,7 +453,7 @@
   }
 
   function icon(name) {
-    return '<img src="assets/icons/' + htmlEscape(name) + '" alt="">';
+    return '<span class="ui-icon" style="--icon-url:url(assets/icons/' + htmlEscape(name) + ')" aria-hidden="true"></span>';
   }
 
   function dayById(dayId) {
@@ -480,10 +503,13 @@
       naverIntent = "intent://search?query=" + encodedName + "&appname=jeju.olle.plan#Intent;scheme=nmap;package=com.nhn.android.nmap;S.browser_fallback_url=" + encodeURIComponent(naverWeb) + ";end";
     }
 
-    const labelSuffix = compact ? "" : " 导航";
+    const hasLocation = hasCoordinates(place);
+    const cycling = /骑行|bike|bicycle/i.test(context || "");
+    const kakaoLabel = hasLocation ? (cycling ? " 步行路线" : " 导航") : " 搜索";
+    const naverLabel = hasLocation ? (cycling ? " 骑行路线" : " 导航") : " 搜索";
     return '<div class="map-actions">' +
-      '<a class="map-button' + (hasCoordinates(place) ? "" : " disabled") + '" href="' + htmlEscape(kakaoWeb) + '" target="_blank" rel="noopener" data-map-app="Kakao Map" data-app-url="' + htmlEscape(kakaoApp) + '" data-android-intent="' + htmlEscape(kakaoIntent) + '" aria-label="使用Kakao Map前往' + htmlEscape(place.name) + '">' + icon("map.svg") + "KAKAO" + labelSuffix + "</a>" +
-      '<a class="map-button' + (hasCoordinates(place) ? "" : " disabled") + '" href="' + htmlEscape(naverWeb) + '" target="_blank" rel="noopener" data-map-app="Naver Map" data-app-url="' + htmlEscape(naverApp) + '" data-android-intent="' + htmlEscape(naverIntent) + '" aria-label="使用Naver Map前往' + htmlEscape(place.name) + '">' + icon("navigation.svg") + "NAVER" + labelSuffix + "</a>" +
+      '<a class="map-button" href="' + htmlEscape(kakaoWeb) + '" target="_blank" rel="noopener" data-map-app="Kakao Map" data-app-url="' + htmlEscape(kakaoApp) + '" data-android-intent="' + htmlEscape(kakaoIntent) + '" aria-label="Kakao' + kakaoLabel + '：' + htmlEscape(place.name) + '">' + icon("map.svg") + "Kakao" + kakaoLabel + "</a>" +
+      '<a class="map-button" href="' + htmlEscape(naverWeb) + '" target="_blank" rel="noopener" data-map-app="Naver Map" data-app-url="' + htmlEscape(naverApp) + '" data-android-intent="' + htmlEscape(naverIntent) + '" aria-label="Naver' + naverLabel + '：' + htmlEscape(place.name) + '">' + icon("navigation.svg") + "Naver" + naverLabel + "</a>" +
     "</div>";
   }
 
@@ -661,21 +687,7 @@
   }
 
   function cutoffStatus(day) {
-    const cutoffs = day.cutoffs || [];
-    if (!cutoffs.length) return null;
-    const execution = executionForDay(day.id, false);
-    const selected = cutoffs.find(function (item) { return !isStepDone(execution, item.resolveStepId); });
-    if (!selected) return Object.assign({ tone: "normal", countdown: "已处理" }, cutoffs.at(-1));
-    const nowParts = jejuNowParts();
-    const selectedDate = "2026-" + day.id.slice(0, 2) + "-" + day.id.slice(2);
-    const currentDate = nowParts.year + "-" + nowParts.month + "-" + nowParts.day;
-    if (selectedDate !== currentDate) return Object.assign({ tone: "preview", countdown: "当地 " + selected.time }, selected);
-    const now = Date.now();
-    const deadline = new Date(selectedDate + "T" + selected.time + ":00+09:00").getTime();
-    const deltaMinutes = Math.ceil((deadline - now) / 60000);
-    if (deltaMinutes < 0) return Object.assign({ tone: "overdue", countdown: "已超时 " + Math.abs(deltaMinutes) + " 分" }, selected);
-    const countdown = deltaMinutes >= 60 ? "还剩 " + Math.floor(deltaMinutes / 60) + " 小时 " + deltaMinutes % 60 + " 分" : "还剩 " + deltaMinutes + " 分";
-    return Object.assign({ tone: deltaMinutes <= 60 ? "warning" : "normal", countdown }, selected);
+    return tripLogic.cutoffGroups(day, state, Date.now()).next;
   }
 
   function cutoffDisplay(day, cutoff) {
@@ -800,6 +812,8 @@
 
   function undoStamp() {
     if (!lastStampAction) return;
+    hideCelebration();
+    recentlyStamped = "";
     const action = lastStampAction;
     lastStampAction = null;
     state.stamps[action.key] = false;
@@ -913,10 +927,7 @@
     const stamps = stampStats();
     const percent = Math.min(100, km);
     document.getElementById("today-overview").innerHTML =
-      '<section class="today-hero"><div class="today-hero-inner">' +
-        '<div><p class="trip-date">2026.09.23–09.28 · SOLO WALK</p><h1 id="today-title">济州偶来 <span>100 km行程</span></h1><p class="trip-route">北京大兴 → 济州东部 → 西归浦 → 加波岛 → 北京首都</p></div>' +
-        '<div class="hero-progress"><div class="hero-progress-top"><span>' + (km >= 100 ? "证书里程已达成" : "认证进度") + '</span><strong>' + km.toFixed(1) + ' KM</strong></div><div class="progress-track"><div class="progress-fill" style="width:' + percent + '%"></div></div><p class="hero-progress-foot">核心计划 ' + data.trip.coreCertificateKm + ' km · 纸质盖章 ' + stamps.checked + " / " + stamps.total + "</p></div>" +
-      "</div></section>";
+      '<section class="trip-summary"><div><p class="trip-date">2026.09.23—09.28</p><h1 id="today-title">沿着海岸，收集济州</h1><p>偶来 100 km · 核心计划 ' + data.trip.coreCertificateKm + ' km</p></div><div class="trip-summary-progress"><div><span>已集齐章的步行线路</span><strong>' + km.toFixed(1) + ' <small>km</small></strong></div><div class="progress-track"><div class="progress-fill" style="width:' + percent + '%"></div></div><p>核心章点 ' + stamps.checked + '/' + stamps.total + ' · 整线集齐后计入里程</p></div></section>';
   }
 
   function renderDateStrip(targetId) {
@@ -926,16 +937,11 @@
   }
 
   function renderTodayAction(day, execution) {
-    const done = day.timeline.filter(function (item) { return isStepDone(execution, item.id); }).length;
-    const dayStamps = stampsForDay(day);
-    const checkedStamps = dayStamps.filter(function (key) { return state.stamps[key]; }).length;
-    const cutoff = cutoffStatus(day);
-    const km = completedKm();
-    if (execution.status === "finished") {
-      return '<section class="today-action-card finished"><div class="today-action-finished"><div><span class="execution-kicker">DAY CLOSED</span><h3>今日执行已结束</h3><p>完成 ' + done + " / " + day.timeline.length + ' 个步骤，进度和章点均已保存。</p></div><button class="primary-button" type="button" data-reopen-execution="' + day.id + '">重新打开</button></div>' + renderTodayActionMetrics(day, cutoff, checkedStamps, dayStamps.length, km) + "</section>";
-    }
-    const place = data.places[day.next.place];
-    return '<section class="today-action-card"><div class="today-action-top"><div><span class="next-label">NEXT ACTION</span><time>' + htmlEscape(day.next.time) + '</time></div><span class="mode-badge">' + htmlEscape(day.next.mode) + '</span></div><div class="today-action-heading"><div><h3>' + htmlEscape(day.next.title) + '</h3><p>' + htmlEscape(day.next.detail) + '</p></div></div>' + (place ? mapLinks(place, day.next.mode) : "") + renderTodayActionMetrics(day, cutoff, checkedStamps, dayStamps.length, km) + "</section>";
+    const selected = tripLogic.selectedStep(day, Date.now(), manualStepByDay[day.id]);
+    const step = selected.step;
+    const place = data.places[step.place];
+    const label = selected.manual ? "正在查看" : selected.preview ? "行程预览" : selected.beforeStart ? "今天从这里出发" : "此时计划";
+    return '<section class="today-action-card" data-current-plan="' + step.id + '"><div class="today-action-top"><div><span class="next-label">' + label + '</span><time>' + htmlEscape(step.time) + '</time><small>' + (step.timeZone === "Asia/Shanghai" ? "北京时间" : "济州时间") + '</small></div><span class="mode-badge">' + htmlEscape(step.type) + '</span></div><div class="today-action-heading"><h3>' + htmlEscape(step.title) + '</h3><p>' + htmlEscape(step.detail) + '</p></div>' + (place ? '<p class="action-destination" lang="ko">' + htmlEscape(place.korean) + '</p>' + mapLinks(place, step.type) : "") + '<div class="advisory-controls"><button type="button" data-browse-step="' + (selected.index - 1) + '" ' + (selected.index === 0 ? "disabled" : "") + '>上一项</button><button type="button" data-reset-advisory ' + (!selected.manual ? "disabled" : "") + '>' + (selected.preview ? "回到首项" : "回到此时计划") + '</button><button type="button" data-browse-step="' + (selected.index + 1) + '" ' + (selected.index === day.timeline.length - 1 ? "disabled" : "") + '>下一项</button></div><p class="advisory-note">按计划时间提示 · 不会自动记录完成</p></section>';
   }
 
   function renderTodayActionMetrics(day, cutoff, checkedStamps, totalStamps, km) {
@@ -1008,15 +1014,11 @@
   }
 
   function renderQuickTimeline(day) {
-    let startIndex = day.timeline.findIndex(function (item) {
-      return item.time === day.next.time && item.title === day.next.title;
-    });
-    const items = startIndex >= 0 ? day.timeline.slice(startIndex + 1, startIndex + 4) : day.timeline.filter(function (item) {
-      return item.title !== day.next.title;
-    }).slice(0, 3);
+    const startIndex = tripLogic.selectedStep(day, Date.now(), manualStepByDay[day.id]).index;
+    const items = day.timeline.slice(startIndex + 1, startIndex + 3);
     if (!items.length) return "";
     return '<div class="section-heading"><h2>接下来</h2><span>' + items.length + ' 个节点</span></div><div class="quick-timeline">' + items.map(function (item) {
-      return '<article class="quick-step"><time>' + htmlEscape(item.time) + '</time><div class="step-card"><h3>' + htmlEscape(item.title) + "</h3><p>" + htmlEscape(item.detail) + "</p></div></article>";
+      return '<article class="quick-step"><time>' + htmlEscape(item.time) + '</time><div class="step-card"><h3>' + htmlEscape(item.title) + "</h3><p>" + htmlEscape(item.detail) + '</p><button class="text-button" type="button" data-browse-step="' + day.timeline.indexOf(item) + '">查看这一项</button></div></article>';
     }).join("") + "</div>";
   }
 
@@ -1071,41 +1073,54 @@
 
   function renderToday() {
     const day = dayById(state.activeDay);
-    const execution = executionForDay(day.id, false);
-    if (execution.status === "active") {
-      document.getElementById("today-content").innerHTML = renderExecutionToday(day, execution);
-      return;
-    }
-    const stamps = stampStats();
-    const km = completedKm();
     const confirmations = confirmationsForDay(day.id);
     const checkedConfirmations = confirmations.filter(function (item) { return state.confirmations[item.id]; }).length;
-    const totalDistance = day.walkKm + (day.bikeKm || 0);
     const checkins = checkinsForDay(day.id);
     const checkedPlaces = checkins.filter(function (item) { return state.checkinChecks[item.id]; }).length;
-
     document.getElementById("today-content").innerHTML =
-      '<div class="day-title-row"><div><p class="overline">' + htmlEscape(day.weekday) + " · " + htmlEscape(day.date) + '</p><h2>' + htmlEscape(day.label) + '</h2><p>' + htmlEscape(day.lead) + '</p></div><div class="distance-mark">' + totalDistance.toFixed(1) + '<small>' + (day.bikeKm ? day.walkKm + " WALK + " + day.bikeKm + " BIKE" : "KM WALK") + "</small></div></div>" +
-      renderTodayAction(day, execution) +
+      '<div class="today-context"><span>' + (tripLogic.dayKey(Date.now()) === tripLogic.dateKey(day.id) ? "今天" : "正在预览") + ' · ' + htmlEscape(day.date) + '</span><button class="text-button" type="button" data-return-today>' + (tripLogic.dayKey(Date.now()) < "2026-09-23" ? "回到出发日" : tripLogic.dayKey(Date.now()) > "2026-09-28" ? "回看最后一天" : "回到今天") + '</button></div><div class="day-title-row"><div><h2>' + htmlEscape(day.label) + '</h2></div><div class="distance-mark">' + day.walkKm.toFixed(1) + '<small>计划步行 km' + (day.bikeKm ? '<br>另骑行 ' + day.bikeKm + ' km' : '') + '</small></div></div>' +
+      renderTodayAction(day) +
       '<div class="today-grid"><div class="today-primary">' +
-        '<section class="weather-strip" id="weather-panel" aria-label="所选日期沿途天气"><div class="weather-top"><div class="weather-heading"><span>沿途天气</span><strong>' + htmlEscape(WEATHER_REGIONS[day.id].name) + '</strong></div><button class="weather-refresh" type="button" data-refresh-weather aria-label="刷新沿途天气" title="刷新沿途天气">' + icon("refresh-cw.svg") + '</button></div><div class="weather-content" aria-live="polite"></div></section>' +
-        renderRouteTeaser(day) +
+        renderTodayRisk(day) + renderTodayStamp(day) +
         renderQuickTimeline(day) +
-        (day.cutoff ? '<section class="cutoff-card"><strong>硬截止 · ' + htmlEscape(day.cutoff) + "</strong><p>" + htmlEscape(day.fallback) + '</p><label class="fallback-toggle"><input type="checkbox" data-fallback="' + day.id + '" ' + (state.fallbacks[day.id] ? "checked" : "") + '><span>' + (state.fallbacks[day.id] ? "已启用备选方案" : "启用备选方案") + "</span></label></section>" : "") +
-        '<div class="data-actions"><button class="secondary-button" type="button" data-view-target="plan">' + icon("calendar-days.svg") + "查看完整时间轴</button></div>" +
+        '<div class="data-actions"><button class="secondary-button" type="button" data-open-plan-time>' + icon("calendar-days.svg") + '查看完整时间轴</button></div>' + renderRouteTeaser(day) +
       '</div><aside class="today-side">' +
-        '<section class="status-panel"><div class="status-panel-head"><h3>100 km进度</h3><span>' + (km >= 100 ? "READY" : (100 - km).toFixed(1) + " KM TO GO") + '</span></div><div class="mini-progress"><i style="width:' + Math.min(100, km) + '%"></i></div><div class="metric-row"><div><span>核心</span><strong>' + data.trip.coreCertificateKm + '</strong></div><div><span>认证</span><strong>' + km.toFixed(1) + '</strong></div><div><span>盖章</span><strong>' + stamps.checked + "/" + stamps.total + "</strong></div></div></section>" +
-        '<section class="status-panel"><div class="status-panel-head"><h3>出发前确认</h3><span>' + checkedConfirmations + "/" + confirmations.length + "</span></div>" + renderConfirmationRows(confirmations) + "</section>" +
+        (confirmations.length ? '<section class="status-panel"><div class="status-panel-head"><h3>出发前确认</h3><span>' + checkedConfirmations + "/" + confirmations.length + "</span></div>" + renderConfirmationRows(confirmations) + "</section>" : "") +
         renderTodayExpensePanel(day.id) +
-        '<section class="status-panel"><div class="status-panel-head"><h3>当天打卡</h3><span>' + checkedPlaces + "/" + checkins.length + '</span></div><div class="data-actions"><button class="secondary-button" type="button" data-view-target="checkins">' + icon("map-pin-check.svg") + '查看地点</button><button class="secondary-button" type="button" data-open-checkin>' + icon("plus.svg") + '新增</button></div></section>' +
+        '<section class="status-panel"><div class="status-panel-head"><h3>今天的收藏</h3><span>已到访 ' + checkedPlaces + "/" + checkins.length + '</span></div><div class="data-actions"><button class="secondary-button" type="button" data-view-target="checkins">' + icon("map-pin-check.svg") + '查看地点</button><button class="secondary-button" type="button" data-open-checkin>' + icon("plus.svg") + '新增</button></div></section>' +
       "</aside></div>";
+    const otherCutoffs = document.querySelector("#today-content .other-cutoffs");
+    if (otherCutoffs) {
+      otherCutoffs.dataset.otherCutoffs = day.id;
+      otherCutoffs.open = openOtherCutoffDays.has(day.id);
+    }
+  }
+
+  function renderTodayStamp(day) {
+    const keys = stampsForDay(day);
+    if (!keys.length) return "";
+    const stamp = nextStamp(day);
+    const checked = keys.filter(function (key) { return state.stamps[key]; }).length;
+    return '<details class="today-stamp ' + (recentlyStamped ? "just-stamped" : "") + '" data-stamp-day="' + day.id + '" ' + (openStampDays.has(day.id) ? "open" : "") + '><summary class="today-stamp-summary"><span>' + icon("award.svg") + '<span><b>' + (stamp ? '下一枚章 · ' + htmlEscape(stamp.routeId) + '号线' : '今天的章已集齐') + '</b><small>' + (stamp ? htmlEscape(stamp.label) + '章 · ' + htmlEscape(stamp.point.korean) : '记得检查纸质护照上的印迹') + '</small></span></span><strong>' + checked + '/' + keys.length + icon("chevron-down.svg") + '</strong></summary><div class="next-stamp-detail">' + renderExecutionStamp(day) + '<button class="text-button" type="button" data-open-plan-stamps>查看当天全部章点</button></div></details>';
+  }
+
+  function renderCutoffRow(cutoff, resolved) {
+    const explicit = Boolean(state.cutoffChecks[cutoff.id]);
+    return '<div class="cutoff-row ' + cutoff.tone + '" data-cutoff-id="' + cutoff.id + '"><div><strong>' + cutoff.time + ' · ' + htmlEscape(cutoff.title) + '</strong><span>' + htmlEscape(cutoff.countdown) + '</span><p>' + htmlEscape(cutoff.action) + '</p></div>' + (resolved && !explicit ? '<small>根据已记录事项确认</small>' : '<label class="cutoff-check"><input type="checkbox" data-cutoff-check="' + cutoff.id + '" ' + (explicit ? "checked" : "") + '>已处理</label>') + '</div>';
+  }
+
+  function renderTodayRisk(day) {
+    const groups = tripLogic.cutoffGroups(day, state, Date.now());
+    const urgent = Boolean(groups.overdue.length || (groups.next && groups.next.tone === "warning") || hasHighWeatherRisk(day.id));
+    const others = (day.cutoffs || []).filter(function (item) { return (!groups.next || item.id !== groups.next.id) && !groups.overdue.some(function (past) { return past.id === item.id; }) && !groups.resolved.some(function (done) { return done.id === item.id; }); });
+    return '<details class="today-risk" data-risk-day="' + day.id + '" ' + (urgent || openRiskDays.has(day.id) ? "open" : "") + '><summary><span>' + icon("calendar-days.svg") + '<span>截止与天气<small data-risk-weather>天气待更新</small></span></span><strong data-risk-deadline>' + htmlEscape(groups.next ? cutoffDisplay(day, groups.next) : groups.overdue.length ? "有待确认事项" : "暂无待处理截止") + '</strong>' + icon("chevron-down.svg") + '</summary><div class="risk-content">' + (groups.next ? renderCutoffRow(groups.next) : "") + (groups.overdue.length ? '<div class="risk-overdue"><h3>时间已过，请核对是否处理</h3>' + groups.overdue.map(function (item) { return renderCutoffRow(item); }).join("") + '</div>' : '') + (others.length || groups.resolved.length ? '<details class="other-cutoffs"><summary>其余截止与确认记录</summary>' + others.map(function (item) { return renderCutoffRow(Object.assign({}, item, { tone: "preview", countdown: "济州当地时间" })); }).join("") + groups.resolved.map(function (item) { return renderCutoffRow(item, true); }).join("") + '</details>' : '') + '<section class="weather-strip" id="weather-panel" aria-label="所选日期沿途天气"><div class="weather-top"><div class="weather-heading"><span>沿途天气</span><strong>' + htmlEscape(WEATHER_REGIONS[day.id].name) + '</strong></div><button class="weather-refresh" type="button" data-refresh-weather aria-label="刷新沿途天气">' + icon("refresh-cw.svg") + '</button></div><div class="weather-content" aria-live="polite"></div></section>' + (day.fallback ? '<div class="fallback-note ' + (state.fallbacks[day.id] ? "enabled" : "") + '"><p>' + htmlEscape(day.fallback) + '</p><label class="fallback-toggle"><input type="checkbox" data-fallback="' + day.id + '" ' + (state.fallbacks[day.id] ? "checked" : "") + '>已启用备选方案</label></div>' : '') + '</div></details>';
   }
 
   function renderTimeline(day) {
     return '<div class="section-heading"><h2>时间与交通</h2><span>' + day.timeline.length + ' 个节点</span></div><div class="timeline">' + day.timeline.map(function (item) {
       const place = item.place ? data.places[item.place] : null;
       const typeClass = item.risk ? "risk" : item.type === "徒步" ? "walk" : "";
-      return '<article class="timeline-item"><time class="timeline-time">' + htmlEscape(item.time) + '</time><div class="timeline-card"><div class="timeline-top"><h3>' + htmlEscape(item.title) + '</h3><span class="type-tag ' + typeClass + '">' + htmlEscape(item.type) + "</span></div><p>" + htmlEscape(item.detail) + "</p>" + (place ? '<p class="place-address"><b>' + htmlEscape(place.korean) + "</b> · " + htmlEscape(place.address) + "</p>" + mapLinks(place, item.type + " " + item.title) : "") + "</div></article>";
+      return '<article class="timeline-item"><time class="timeline-time">' + htmlEscape(item.time) + '</time><div class="timeline-card"><div class="timeline-top"><h3>' + htmlEscape(item.title) + '</h3><span class="type-tag ' + typeClass + '">' + htmlEscape(item.type) + "</span></div><p>" + htmlEscape(item.detail) + "</p>" + (place ? '<p class="place-address"><b>' + htmlEscape(place.korean) + "</b> · " + htmlEscape(place.address) + "</p>" + mapLinks(place, item.type + " " + item.title) : "") + '<button class="text-button timeline-browse" type="button" data-advisory-step="' + item.id + '" data-advisory-day="' + day.id + '">在今日页查看此项</button></div></article>';
     }).join("") + "</div>";
   }
 
@@ -1135,7 +1150,6 @@
 
   function renderPlanSectionNav(day, dayCheckins, hotel, printMode) {
     if (printMode) return "";
-    const execution = executionForDay(day.id, false);
     const hasStamps = Boolean((day.stampPlan && day.stampPlan.length) || day.routeIds.length);
     const links = [
       { id: "time", label: "时间", icon: "calendar-days.svg", show: true },
@@ -1145,7 +1159,7 @@
     ].filter(function (item) { return item.show; });
     return '<nav class="plan-section-nav" aria-label="计划章节">' + links.map(function (item) {
       return '<button type="button" data-plan-section="plan-' + item.id + "-" + day.id + '">' + icon(item.icon) + htmlEscape(item.label) + "</button>";
-    }).join("") + (execution.status === "active" ? '<button class="plan-current-step" type="button" data-view-target="today">' + icon("navigation.svg") + "返回当前</button>" : "") + "</nav>";
+    }).join("") + '<button class="plan-current-step" type="button" data-return-advisory>' + icon("navigation.svg") + '返回今日</button></nav>';
   }
 
   function renderPlanDay(day, printMode) {
@@ -1177,7 +1191,7 @@
     const day = dayById(item.dayId);
     const checked = Boolean(state.checkinChecks[item.id]);
     const detail = [item.dish, item.note].filter(Boolean).join(" · ");
-    return '<article class="checkin-card ' + (checked ? "completed" : "") + '" data-checkin-card="' + htmlEscape(item.id) + '"><div class="checkin-card-top"><div><span class="category-label">' + icon(category.icon) + htmlEscape(category.label) + '</span><h2>' + htmlEscape(place.name) + '</h2>' + (place.korean ? '<p class="checkin-korean">' + htmlEscape(place.korean) + "</p>" : "") + '</div><button class="checkin-toggle ' + (checked ? "checked" : "") + '" type="button" data-toggle-checkin="' + htmlEscape(item.id) + '" aria-label="' + (checked ? "取消打卡" : "标记已打卡") + '">' + icon("check.svg") + "</button></div>" +
+    return '<article class="checkin-card ' + (checked ? "completed" : "") + (recentCheckins.has(item.id) ? " just-visited" : "") + '" data-checkin-card="' + htmlEscape(item.id) + '"><div class="checkin-card-top"><div><span class="category-label">' + icon(category.icon) + htmlEscape(category.label) + '</span><h2>' + htmlEscape(place.name) + '</h2>' + (checked ? '<span class="visited-badge">' + icon("check.svg") + '已到访</span>' : '') + (place.korean ? '<p class="checkin-korean">' + htmlEscape(place.korean) + "</p>" : "") + '</div><button class="checkin-toggle ' + (checked ? "checked" : "") + '" type="button" data-toggle-checkin="' + htmlEscape(item.id) + '" aria-pressed="' + checked + '" aria-label="' + (checked ? "取消打卡" : "标记已打卡") + '">' + icon("check.svg") + "</button></div>" +
       '<div class="checkin-meta"><span>' + htmlEscape(day.date) + "</span><span>" + htmlEscape(item.priority || "想去") + "</span>" + (item.slot ? "<span>" + htmlEscape(item.slot) + "</span>" : "") + "</div>" +
       (detail ? '<p class="checkin-detail">' + htmlEscape(detail) + "</p>" : "") +
       (place.address ? '<p class="place-address"><b>' + htmlEscape(place.korean || place.name) + "</b> · " + htmlEscape(place.address) + "</p>" : "") +
@@ -1188,6 +1202,8 @@
   }
 
   function renderCheckinFilters() {
+    const summary = document.getElementById("checkin-filter-summary");
+    if (summary) summary.textContent = (filterState.day === "all" ? "全部日期" : dayById(filterState.day).date) + " · " + data.categories[filterState.category].label;
     const dayOptions = [{ id: "all", date: "全部日期" }].concat(data.days);
     document.getElementById("checkin-day-filter").innerHTML = dayOptions.map(function (day) {
       return '<button class="filter-chip" type="button" data-filter-day="' + day.id + '" aria-pressed="' + (filterState.day === day.id) + '">' + htmlEscape(day.date) + "</button>";
@@ -1223,10 +1239,10 @@
       const dayDifference = DAY_IDS.indexOf(a.dayId) - DAY_IDS.indexOf(b.dayId);
       return dayDifference || checkinPriorityRank(a.priority) - checkinPriorityRank(b.priority) || String(a.slot || "").localeCompare(String(b.slot || ""), "zh-CN");
     });
-    const pending = items.filter(function (item) { return !state.checkinChecks[item.id]; });
-    const completed = items.filter(function (item) { return state.checkinChecks[item.id]; });
+    const pending = items.filter(function (item) { return !state.checkinChecks[item.id] || recentCheckins.has(item.id); });
+    const completed = items.filter(function (item) { return state.checkinChecks[item.id] && !recentCheckins.has(item.id); });
     const pendingHtml = pending.map(renderCheckinCard).join("");
-    const completedHtml = completed.length ? '<details class="completed-checkins" ' + (query || completedCheckinsOpen ? "open" : "") + '><summary><span>已完成 ' + completed.length + ' 个</span><small>' + (query ? "搜索结果" : "展开查看") + " " + icon("chevron-down.svg") + '</small></summary><div class="checkin-list completed-checkin-list">' + completed.map(renderCheckinCard).join("") + "</div></details>" : "";
+    const completedHtml = completed.length ? '<details class="completed-checkins" ' + (query || completedCheckinsOpen ? "open" : "") + '><summary><span>旅程收藏 · 已到访 ' + completed.length + ' 处</span><small>' + (query ? "搜索结果" : "展开回看") + " " + icon("chevron-down.svg") + '</small></summary><div class="checkin-list completed-checkin-list">' + completed.map(renderCheckinCard).join("") + "</div></details>" : "";
     document.getElementById("checkin-list").innerHTML = pending.length || completed.length
       ? pendingHtml + completedHtml
       : '<div class="empty-state">' + icon("map-pin-off.svg") + "<p>当前筛选下没有打卡点。</p></div>";
@@ -1287,22 +1303,29 @@
     document.getElementById("more-content").innerHTML =
       '<div class="more-grid">' +
         renderExpenseLedger() +
+        renderJourneyMemories() +
         '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("plane.svg") + '<h2>航班</h2></div><span class="type-tag">以订单为准</span></div><div class="flight-pair">' + data.flights.map(renderFlightCard).join("") + "</div></section>" +
         '<section class="more-section"><div class="more-section-head"><div>' + icon("award.svg") + '<h2>100 km证书</h2></div><span class="type-tag walk">' + (km >= 100 ? "READY" : km.toFixed(1) + " KM") + '</span></div><div class="certificate-callout"><strong>9月28日 · 返港后</strong><p>13:00起目标办理；晚船返港时须赶在16:30受理结束前。</p></div><ul class="fact-list"><li><span>受理时间</span><strong>09:00–11:30<br>13:00–16:30</strong></li><li><span>核心认证里程</span><strong>102.1 km</strong></li><li><span>必须携带</span><strong>本人纸质护照</strong></li><li><span>现场步骤</span><strong>QR问卷 + 验章</strong></li></ul>' + mapLinks(hamo, "步行") + "</section>" +
         '<section class="more-section"><div class="more-section-head"><div>' + icon("briefcase.svg") + '<h2>行李与船班确认</h2></div><span class="type-tag">' + confirmed + "/" + allConfirmations.length + "</span></div>" + renderConfirmationRows(allConfirmations) + "</section>" +
         '<section class="more-section"><div class="more-section-head"><div>' + icon("link.svg") + '<h2>官方查询</h2></div></div><div class="official-links">' + officialLinks.map(function (link) {
           return '<a class="official-link" href="' + link[1] + '" target="_blank" rel="noopener"><span>' + htmlEscape(link[0]) + "</span>" + icon("external-link.svg") + "</a>";
         }).join("") + "</div></section>" +
-        '<section class="more-section"><div class="more-section-head"><div>' + icon("settings-2.svg") + '<h2>显示与安装</h2></div></div><div class="settings-list"><label class="setting-row"><span>紧凑显示</span><span class="toggle"><input id="compact-toggle" type="checkbox" ' + (state.compact ? "checked" : "") + '><i></i></span></label><div class="setting-row"><span>安装到手机桌面</span><button id="install-button" class="secondary-button" type="button" ' + (canInstall ? "" : "disabled") + ">" + icon("download.svg") + (canInstall ? "安装" : "由浏览器提供") + "</button></div></div></section>" +
+        '<section class="more-section"><div class="more-section-head"><div>' + icon("settings-2.svg") + '<h2>显示与离线</h2></div></div><div class="settings-list"><label class="setting-row"><span>紧凑显示</span><span class="toggle"><input id="compact-toggle" type="checkbox" ' + (state.compact ? "checked" : "") + '><i></i></span></label>' + (canInstall ? '<div class="setting-row"><span>安装到手机桌面</span><button id="install-button" class="secondary-button" type="button">' + icon("download.svg") + '安装</button></div>' : '') + '</div><p class="install-help">' + installationHelp() + '</p><p data-offline-readiness>' + (offlineShellReady ? '行程页面与本地图标已缓存，可离线打开。' : '离线资源尚未确认就绪，请联网打开一次并等待缓存。') + '</p><p>地图、官方章点图和公交船运页面仍需联网；离线天气只显示上次数据。</p></section>' +
         '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("notebook-pen.svg") + '<h2>全程备忘</h2></div><span class="type-tag">自动保存</span></div><textarea id="trip-notes" rows="6" placeholder="车票、天气、临时变更……">' + htmlEscape(state.notes) + "</textarea></section>" +
-        '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("database.svg") + '<h2>数据备份</h2></div><span class="type-tag">本机保存</span></div><p>导出文件包含执行进度、旅行支出、打卡点、盖章和备注，可在另一台设备导入；临时定位不会导出。</p><div class="data-actions"><button id="export-button" class="secondary-button" type="button">' + icon("download.svg") + '导出备份</button><button id="import-button" class="secondary-button" type="button">' + icon("upload.svg") + '导入备份</button>' + (hasRecovery ? '<button id="recovery-button" class="secondary-button" type="button">' + icon("history.svg") + "恢复导入前数据</button>" : "") + '<button id="reset-button" class="text-button danger-button" type="button">恢复默认</button></div></section>' +
+        '<section class="more-section span-2"><div class="more-section-head"><div>' + icon("database.svg") + '<h2>数据备份</h2></div><span class="type-tag">本机保存</span></div><p>包含支出、打卡、盖章、截止确认、备注与兼容保留的历史进度；临时定位不会导出。</p><p>' + (lastBackupAt && Number.isFinite(Date.parse(lastBackupAt)) ? '最近发起导出：' + htmlEscape(weatherUpdatedAt(Date.parse(lastBackupAt))) + '。请确认文件已保存。' : '尚未在这台设备导出备份。换浏览器或换手机前，请先保存一份。') + '</p><div class="data-actions"><button id="export-button" class="secondary-button" type="button">' + icon("download.svg") + '导出备份</button><button id="import-button" class="secondary-button" type="button">' + icon("upload.svg") + '导入备份</button>' + (hasRecovery ? '<button id="recovery-button" class="secondary-button" type="button">' + icon("history.svg") + "恢复导入前数据</button>" : "") + '<button id="reset-button" class="text-button danger-button" type="button">恢复默认</button></div></section>' +
       "</div>";
+  }
+
+  function installationHelp() {
+    if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) return "已在独立应用窗口中打开。";
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)) return /MicroMessenger/.test(navigator.userAgent) ? "在微信右上角菜单选择用 Safari 打开，再从 Safari 的分享菜单选择“添加到主屏幕”。" : "在 Safari 的分享菜单选择“添加到主屏幕”，下次从桌面打开。";
+    return "可在浏览器菜单中寻找“安装应用”或“添加到主屏幕”；本机数据不会自动同步到其他浏览器。";
   }
 
   function renderAll() {
     document.body.dataset.density = state.compact ? "compact" : "comfortable";
-    document.body.dataset.executionFocus = state.activeView === "today" && executionForDay(state.activeDay, false).status === "active" ? "true" : "false";
-    document.getElementById("view-today").setAttribute("aria-labelledby", document.body.dataset.executionFocus === "true" ? "execution-title" : "today-title");
+    document.body.dataset.executionFocus = "false";
+    document.getElementById("view-today").setAttribute("aria-labelledby", "today-title");
     document.querySelectorAll(".app-view").forEach(function (view) {
       view.hidden = view.dataset.view !== state.activeView;
     });
@@ -1325,16 +1348,19 @@
 
   function switchView(viewName, preserveScroll) {
     if (!ALLOWED_VIEWS.includes(viewName)) return;
+    viewScroll[state.activeView] = window.scrollY;
+    if (viewName !== state.activeView) recentCheckins.clear();
     if (viewName === "checkins" && state.activeView !== "checkins") filterState.day = state.activeDay;
     state.activeView = viewName;
     saveState();
     renderAll();
-    if (!preserveScroll) window.scrollTo({ top: 0, behavior: "instant" });
+    if (!preserveScroll) window.scrollTo({ top: viewScroll[viewName] || 0, behavior: "instant" });
   }
 
   function selectDay(dayId) {
     if (!DAY_IDS.includes(dayId)) return;
     if (state.activeDay !== dayId) clearExecutionLocation();
+    recentCheckins.clear();
     state.activeDay = dayId;
     executionTimelineOpen = false;
     executionRiskOpen = false;
@@ -1345,11 +1371,7 @@
   function scrollToPlanSection(targetId) {
     const target = document.getElementById(targetId);
     if (!target) return;
-    if (target.classList.contains("plan-side") && window.matchMedia("(min-width: 821px)").matches) {
-      target.focus({ preventScroll: true });
-      return;
-    }
-    const stickyOffset = window.matchMedia("(max-width: 560px)").matches ? 190 : 206;
+    const stickyOffset = document.querySelector(".app-bar").getBoundingClientRect().height + (document.querySelector(".plan-section-nav")?.getBoundingClientRect().height || 0) + 16;
     const top = Math.max(0, window.scrollY + target.getBoundingClientRect().top - stickyOffset);
     window.scrollTo({ top, behavior: "instant" });
     target.focus({ preventScroll: true });
@@ -1370,7 +1392,9 @@
     const layer = document.getElementById("celebration-layer");
     if (!layer) return;
     window.clearTimeout(celebrationTimer);
-    const isStamp = kind === "stamp";
+    window.clearTimeout(toastTimer);
+    if (kind !== "milestone" && kind !== "goal") return;
+    const isGoal = kind === "goal";
     const sparkPositions = [
       { x: "-136px", y: "-22px", r: "-24deg", tone: "coral" },
       { x: "-108px", y: "28px", r: "18deg", tone: "gold" },
@@ -1384,15 +1408,29 @@
     const sparks = sparkPositions.map(function (spark) {
       return '<i class="celebration-spark ' + spark.tone + '" style="--spark-x:' + spark.x + ';--spark-y:' + spark.y + ';--spark-r:' + spark.r + '"></i>';
     }).join("");
-    const title = isStamp ? "章已收入护照" : "这一站已加入旅程";
-    const kicker = isStamp ? "PASSPORT MOMENT" : "TRIP MEMORY";
-    const copy = detail || (isStamp ? "继续沿着海岸向前" : "把喜欢的地方记下来");
-    layer.innerHTML = '<div class="celebration-card celebration-' + (isStamp ? "stamp" : "checkin") + '">' + sparks + '<div class="celebration-seal">' + icon(isStamp ? "award.svg" : "map-pin-check.svg") + '</div><div class="celebration-copy"><span>' + kicker + '</span><strong>' + title + '</strong><p>' + htmlEscape(label) + ' · ' + htmlEscape(copy) + '</p></div></div>';
+    const title = isGoal ? "100 km，一路的章都记得" : label + "的章，集齐了";
+    layer.classList.remove("leaving");
+    layer.innerHTML = '<div class="celebration-card celebration-' + kind + '">' + sparks + '<div class="celebration-seal">' + icon("award.svg") + '</div><div class="celebration-copy"><span>旅程纪念</span><strong>' + htmlEscape(title) + '</strong><p>' + htmlEscape(detail) + '</p><div class="celebration-actions"><button type="button" data-toast-action="undo-stamp">撤销这枚章</button><button type="button" data-dismiss-celebration>收起</button></div></div></div>';
+    document.getElementById("toast").hidden = true;
     layer.hidden = false;
     celebrationTimer = window.setTimeout(function () {
-      layer.hidden = true;
-      layer.innerHTML = "";
-    }, 1900);
+      layer.classList.add("leaving");
+      celebrationTimer = window.setTimeout(function () { lastStampAction = null; hideCelebration(); }, 220);
+    }, 8000);
+  }
+
+  function hideCelebration() {
+    window.clearTimeout(celebrationTimer);
+    const layer = document.getElementById("celebration-layer");
+    layer.hidden = true;
+    layer.innerHTML = "";
+    layer.classList.remove("leaving");
+  }
+
+  function renderJourneyMemories() {
+    const routes = Object.values(data.routes).filter(function (route) { return tripLogic.routeComplete(route, state.stamps); });
+    if (!routes.length) return '<section class="more-section span-2 journey-memories"><h2>旅程纪念</h2><p>每集齐一条线路的章，这里就留下一份纪念。</p></section>';
+    return '<section class="more-section span-2 journey-memories"><h2>旅程纪念</h2><div class="memory-list">' + (completedKm() >= 100 ? '<article class="memory-card goal"><span>100 km里程目标</span><h3>沿着海岸，走到了这里</h3><p>根据已记录的整线章点计算；正式证书需携纸质护照现场验章。</p></article>' : '') + routes.map(function (route) { return '<article class="memory-card" data-memory-route="' + route.id + '">' + icon("award.svg") + '<span>' + htmlEscape(route.mode) + ' · ' + route.km + ' km</span><h3>' + route.id + '号线</h3><p>本线章点已集齐' + (route.counts ? '' : ' · 骑行不计步行认证') + '</p></article>'; }).join('') + '</div></section>';
   }
 
   function populateCheckinDayOptions() {
@@ -1737,6 +1775,7 @@
     try {
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: "济州偶来行程备份" });
+        recordBackupExport();
         return;
       }
     } catch (error) {
@@ -1750,7 +1789,21 @@
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    recordBackupExport();
     showToast("备份文件已导出");
+  }
+
+  function recordBackupExport() {
+    lastBackupAt = new Date().toISOString();
+    try { localStorage.setItem("jeju-olle-last-backup", lastBackupAt); } catch (error) { /* Nonessential metadata. */ }
+    renderMore();
+  }
+
+  function resetRecordFeedback() {
+    lastStampAction = null; lastVisitAction = null; recentlyStamped = "";
+    recentCheckins.clear(); openStampDays.clear(); openRiskDays.clear(); openOtherCutoffDays.clear();
+    Object.keys(manualStepByDay).forEach(function (key) { delete manualStepByDay[key]; });
+    hideCelebration();
   }
 
   async function importBackup(file) {
@@ -1765,14 +1818,11 @@
       else throw new Error("不支持的备份版本");
       localStorage.setItem(RECOVERY_KEY, JSON.stringify(state));
       state = nextState;
+      resetRecordFeedback();
       clearExecutionLocation();
       filterState.day = state.activeDay;
       filterState.category = "all";
       filterState.query = "";
-      data.days.forEach(function (day) {
-        const execution = state.executions[day.id];
-        if (execution) syncExecutionFromStamps(day, execution);
-      });
       deletedCheckin = null;
       deletedExpense = null;
       saveState();
@@ -1789,14 +1839,11 @@
     try {
       const recovery = JSON.parse(localStorage.getItem(RECOVERY_KEY));
       state = normalizeState(recovery);
+      resetRecordFeedback();
       clearExecutionLocation();
       filterState.day = state.activeDay;
       filterState.category = "all";
       filterState.query = "";
-      data.days.forEach(function (day) {
-        const execution = state.executions[day.id];
-        if (execution) syncExecutionFromStamps(day, execution);
-      });
       deletedCheckin = null;
       deletedExpense = null;
       saveState();
@@ -1811,6 +1858,7 @@
   function resetState() {
     if (!window.confirm("确认清除新增地点、旅行支出、盖章、确认项和备注，恢复默认行程？")) return;
     state = defaultState();
+    resetRecordFeedback();
     clearExecutionLocation();
     filterState.day = state.activeDay;
     filterState.category = "all";
@@ -1828,7 +1876,7 @@
     const status = document.getElementById("network-status");
     const online = navigator.onLine;
     status.classList.toggle("offline", !online);
-    status.lastChild.textContent = online ? "在线" : "离线可用";
+    status.lastChild.textContent = online ? "在线" : offlineShellReady ? "离线可用" : "离线";
   }
 
   function initializeInstall() {
@@ -1858,6 +1906,7 @@
   function initializeServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
     navigator.serviceWorker.register("./sw.js").then(function (registration) {
+      navigator.serviceWorker.ready.then(checkOfflineShell);
       if (registration.waiting && navigator.serviceWorker.controller) {
         waitingWorker = registration.waiting;
         document.getElementById("update-banner").hidden = false;
@@ -1876,15 +1925,47 @@
       console.info("离线缓存暂不可用。", error.message);
     });
     navigator.serviceWorker.addEventListener("controllerchange", function () {
+      checkOfflineShell();
       if (!updateReloadRequested) return;
       updateReloadRequested = false;
       window.location.reload();
     });
   }
 
+  async function checkOfflineShell() {
+    if (!("caches" in window)) return;
+    try {
+      const keys = (await caches.keys()).filter(function (key) { return key.startsWith("jeju-olle-app-"); });
+      offlineShellReady = false;
+      for (const key of keys) {
+        const cache = await caches.open(key);
+        const files = ["index.html", "data.js", "trip-logic.js", "app.js", "styles.css", "manifest.webmanifest"];
+        document.querySelectorAll(".ui-icon").forEach(function (element) {
+          const match = /url\(([^)]+)\)/.exec(element.style.getPropertyValue("--icon-url"));
+          if (match) files.push(match[1].replace(/["']/g, ""));
+        });
+        const essentials = await Promise.all(Array.from(new Set(files)).map(function (file) { return cache.match(new URL(file, document.baseURI).href); }));
+        if (essentials.every(Boolean)) { offlineShellReady = true; break; }
+      }
+      updateNetworkStatus();
+      const note = document.querySelector("[data-offline-readiness]");
+      if (note) note.textContent = offlineShellReady ? "行程页面与本地图标已缓存，可离线打开。" : "离线资源尚未确认就绪，请联网打开一次并等待缓存。";
+    } catch (error) { offlineShellReady = false; updateNetworkStatus(); }
+  }
+
   function bindEvents() {
     document.addEventListener("toggle", function (event) {
       const details = event.target;
+      if (details.matches && details.matches("[data-other-cutoffs]")) {
+        if (details.open) openOtherCutoffDays.add(details.dataset.otherCutoffs);
+        else openOtherCutoffDays.delete(details.dataset.otherCutoffs);
+        return;
+      }
+      if (details.matches && details.matches("[data-stamp-day]")) {
+        if (details.open) openStampDays.add(details.dataset.stampDay);
+        else openStampDays.delete(details.dataset.stampDay);
+        return;
+      }
       if (details.matches && details.matches("[data-execution-timeline]")) {
         executionTimelineOpen = details.open;
         return;
@@ -1900,6 +1981,68 @@
       else openRouteDetails.delete(key);
     }, true);
     document.addEventListener("click", function (event) {
+      const riskToggle = event.target.closest(".today-risk > summary");
+      if (riskToggle) {
+        if (riskToggle.parentElement.open) openRiskDays.delete(state.activeDay);
+        else openRiskDays.add(state.activeDay);
+      }
+      const otherCutoffsToggle = event.target.closest(".other-cutoffs > summary");
+      if (otherCutoffsToggle) {
+        const details = otherCutoffsToggle.parentElement;
+        if (details.open) openOtherCutoffDays.delete(details.dataset.otherCutoffs);
+        else openOtherCutoffDays.add(details.dataset.otherCutoffs);
+      }
+      const stampToggle = event.target.closest(".today-stamp > summary");
+      if (stampToggle) {
+        const details = stampToggle.parentElement;
+        if (details.open) openStampDays.delete(details.dataset.stampDay);
+        else openStampDays.add(details.dataset.stampDay);
+      }
+      const browseStep = event.target.closest("[data-browse-step]");
+      const planStep = event.target.closest("[data-advisory-step]");
+      if (planStep) {
+        const dayId = planStep.dataset.advisoryDay;
+        if (!DAY_IDS.includes(dayId) || !dayById(dayId).timeline.some(function (item) { return item.id === planStep.dataset.advisoryStep; })) return;
+        if (state.activeDay !== dayId) clearExecutionLocation();
+        state.activeDay = dayId;
+        manualStepByDay[dayId] = planStep.dataset.advisoryStep;
+        switchView("today");
+        window.scrollTo({ top: 0, behavior: "instant" });
+        return;
+      }
+      if (browseStep) {
+        const step = dayById(state.activeDay).timeline[Number(browseStep.dataset.browseStep)];
+        if (step) manualStepByDay[state.activeDay] = step.id;
+        renderToday(); renderWeather();
+        document.querySelector(".today-action-card").setAttribute("tabindex", "-1");
+        document.querySelector(".today-action-card").focus({ preventScroll: true });
+        return;
+      }
+      if (event.target.closest("[data-reset-advisory]")) {
+        delete manualStepByDay[state.activeDay];
+        renderToday(); renderWeather();
+        return;
+      }
+      if (event.target.closest("[data-return-today]")) {
+        const dayId = initialDayId();
+        delete manualStepByDay[dayId];
+        selectDay(dayId);
+        return;
+      }
+      if (event.target.closest("[data-return-advisory]")) {
+        delete manualStepByDay[state.activeDay];
+        switchView("today");
+        window.scrollTo({ top: 0, behavior: "instant" });
+        return;
+      }
+      const planTime = event.target.closest("[data-open-plan-time]");
+      const planStamps = event.target.closest("[data-open-plan-stamps]");
+      if (planTime || planStamps) {
+        switchView("plan");
+        scrollToPlanSection("plan-" + (planTime ? "time" : "stamps") + "-" + state.activeDay);
+        return;
+      }
+      if (event.target.closest("[data-dismiss-celebration]")) { lastStampAction = null; hideCelebration(); return; }
       const timelineSummary = event.target.closest("[data-execution-timeline] > summary");
       if (timelineSummary) executionTimelineOpen = !timelineSummary.parentElement.open;
       const riskSummary = event.target.closest(".execution-risk-details > summary");
@@ -2005,9 +2148,15 @@
         const item = combinedCheckins().find(function (current) { return current.id === id; });
         const place = item ? placeForCheckin(item) : null;
         state.checkinChecks[id] = checked;
+        if (checked) recentCheckins.add(id);
+        else recentCheckins.delete(id);
         saveState();
         renderAll();
-        if (checked && place) showCelebration("checkin", place.name, item && item.category === "scenic" ? "值得停下来看看" : "记下这一站");
+        document.querySelector('.app-view:not([hidden]) [data-toggle-checkin="' + CSS.escape(id) + '"]')?.focus({ preventScroll: true });
+        if (checked && place) {
+          lastVisitAction = { id, name: place.name };
+          showToast("已到访 · " + place.name, "撤销", "undo-visit", 8000);
+        } else showToast("已取消到访记录");
         return;
       }
       const editCheckin = event.target.closest("[data-edit-checkin]");
@@ -2040,12 +2189,14 @@
       }
       const dayFilter = event.target.closest("[data-filter-day]");
       if (dayFilter) {
+        recentCheckins.clear();
         filterState.day = dayFilter.dataset.filterDay;
         renderCheckins();
         return;
       }
       const categoryFilter = event.target.closest("[data-filter-category]");
       if (categoryFilter) {
+        recentCheckins.clear();
         filterState.category = categoryFilter.dataset.filterCategory;
         renderCheckins();
         return;
@@ -2057,6 +2208,15 @@
         return;
       }
       const toastAction = event.target.closest("[data-toast-action]");
+      if (toastAction && toastAction.dataset.toastAction === "undo-visit" && lastVisitAction) {
+        state.checkinChecks[lastVisitAction.id] = false;
+        recentCheckins.delete(lastVisitAction.id);
+        const name = lastVisitAction.name;
+        lastVisitAction = null;
+        saveState(); renderAll();
+        showToast("已撤销到访 · " + name);
+        return;
+      }
       if (toastAction && toastAction.dataset.toastAction === "undo-delete") {
         undoDelete();
         return;
@@ -2109,26 +2269,39 @@
 
     document.addEventListener("change", function (event) {
       if (event.target.matches("[data-stamp]")) {
+        hideCelebration();
+        window.clearTimeout(toastTimer);
         const key = event.target.dataset.stamp;
         const checked = event.target.checked;
         const context = stampActionContext(key);
         const execution = context.dayId && state.executions[context.dayId];
         const linkedStepDone = Boolean(execution && context.stepId && isStepDone(execution, context.stepId));
         const linkedStepActive = Boolean(execution && execution.activeStepId === context.stepId);
+        const route = Object.values(data.routes).find(function (item) { return (item.stamps || ["start", "middle", "end"]).some(function (stage) { return item.id + "-" + stage === key; }); });
+        const wasComplete = route && tripLogic.routeComplete(route, state.stamps);
+        const previousKm = completedKm();
         state.stamps[key] = checked;
+        recentlyStamped = checked ? key : "";
         data.days.forEach(function (day) {
           const execution = state.executions[day.id];
           if (execution) syncExecutionFromStamps(day, execution);
         });
         saveState();
         renderAll();
+        window.setTimeout(function () { recentlyStamped = ""; document.querySelectorAll(".just-stamped").forEach(function (element) { element.classList.remove("just-stamped"); }); }, 900);
         if (checked) {
           lastStampAction = Object.assign({ key, autoAdvanced: Boolean(execution && linkedStepActive && !linkedStepDone && context.stepId && isStepDone(execution, context.stepId)) }, context);
-          showToast("已记录“" + context.label + "”", "撤销", "undo-stamp", 8000);
-          showCelebration("stamp", context.label, "继续向下一枚章出发");
+          if (previousKm < 100 && completedKm() >= 100) showCelebration("goal", "100 km", "已集齐章的步行线路达到100 km，正式证书请携纸质护照现场办理。");
+          else if (route && !wasComplete && tripLogic.routeComplete(route, state.stamps)) showCelebration("milestone", route.id + "号线", route.km + " km · 已收入更多页的旅程纪念" + (route.counts ? "" : " · 骑行不计认证"));
+          else showToast("已记录“" + context.label + "”", "撤销", "undo-stamp", 8000);
         } else if (lastStampAction && lastStampAction.key === key) {
           lastStampAction = null;
+          hideCelebration();
         }
+      } else if (event.target.matches("[data-cutoff-check]")) {
+        state.cutoffChecks[event.target.dataset.cutoffCheck] = event.target.checked;
+        saveState(); renderToday(); renderWeather();
+        showToast("截止处理状态已保存");
       } else if (event.target.matches("[data-confirmation]")) {
         state.confirmations[event.target.dataset.confirmation] = event.target.checked;
         saveState();
@@ -2178,17 +2351,28 @@
     window.addEventListener("online", function () { updateNetworkStatus(); refreshWeather(false); });
     window.addEventListener("offline", function () { updateNetworkStatus(); renderWeather(); });
     document.addEventListener("visibilitychange", function () {
-      if (!document.hidden) refreshWeather(false);
+      if (!document.hidden) { refreshTodayClock(); refreshWeather(false); }
     });
     window.setInterval(function () {
       if (!document.hidden) refreshWeather(false);
     }, WEATHER_REFRESH_MS);
     window.setInterval(function () {
-      if (!document.hidden && state.activeView === "today" && executionForDay(state.activeDay, false).status === "active") {
-        renderToday();
-        renderWeather();
-      }
+      refreshTodayClock();
     }, 30000);
+  }
+
+  function refreshTodayClock() {
+    if (document.hidden || state.activeView !== "today" || document.activeElement?.closest("textarea,select,dialog[open],input:not([type=checkbox])")) return;
+    const active = document.activeElement;
+    let focusSelector = "";
+    if (active?.matches(".today-risk > summary")) focusSelector = ".today-risk > summary";
+    else if (active?.matches(".other-cutoffs > summary")) focusSelector = ".other-cutoffs > summary";
+    else if (active?.matches(".today-stamp > summary")) focusSelector = ".today-stamp > summary";
+    else for (const attribute of ["data-browse-step", "data-reset-advisory", "data-cutoff-check", "data-refresh-weather", "data-stamp"]) {
+      if (active?.hasAttribute(attribute)) { focusSelector = '[' + attribute + '="' + CSS.escape(active.getAttribute(attribute)) + '"]'; break; }
+    }
+    renderToday(); renderWeather();
+    if (focusSelector) document.querySelector("#today-content " + focusSelector)?.focus({ preventScroll: true });
   }
 
   function configurePrint() {

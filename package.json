@@ -3,7 +3,8 @@
   "version": "5.0.0",
   "private": true,
   "scripts": {
-    "test": "playwright test tests/app.spec.js --reporter=line"
+    "test": "npm run test:logic && playwright test tests/app.spec.js --reporter=line",
+    "test:logic": "node --test tests/*.test.cjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0"

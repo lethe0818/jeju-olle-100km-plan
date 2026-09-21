@@ -145,7 +145,7 @@
       lead: "落地后只做一件事：尽快入住并把明早补给准备好。",
       next: { time: "21:35", title: "9C7205抵达济州国际机场", detail: "取行李、入境后直接前往出租车乘车区。", mode: "航班", place: "airport" },
       timeline: [
-        { id: "0923-step-01", time: "18:55", title: "北京大兴机场起飞", detail: "春秋航空9C7205，PKX → CJU；最终时间以机票订单为准。", type: "航班" },
+        { id: "0923-step-01", time: "18:55", timeZone: "Asia/Shanghai", title: "北京大兴机场起飞", detail: "北京时间18:55（济州19:55）。春秋航空9C7205，PKX → CJU；最终时间以机票订单为准。", type: "航班" },
         { id: "0923-step-02", time: "21:35", title: "抵达济州国际机场", detail: "预留45–65分钟取行李和入境。", type: "航班", place: "airport" },
         { id: "0923-step-03", time: "22:20", title: "机场出租车 → New Star Hotel", detail: "车程约10–15分钟，向司机出示韩文酒店名和地址。", type: "打车", place: "newStar" },
         { id: "0923-step-04", time: "22:45", title: "办理入住", detail: "确认次日05:35退房；备好早餐、水、电解质和便携午餐。", type: "住宿", place: "newStar" }
@@ -194,7 +194,7 @@
       lead: "利用酒店与线路闭环位置，全天轻装完成28.6 km。",
       next: { time: "06:15", title: "Kenny Stay → 旅行者中心", detail: "步行约10–15分钟，06:30准时开走。", mode: "步行", place: "traveler" },
       timeline: [
-        { id: "0926-step-01", time: "06:15", title: "从酒店步行出发", detail: "行李留在连住酒店，只带徒步装备。", type: "步行", place: "kenny" },
+        { id: "0926-step-01", time: "06:15", title: "从酒店步行出发", detail: "行李留在连住酒店，只带徒步装备，前往旅行者中心。", type: "步行", place: "traveler" },
         { id: "0926-step-02", time: "06:30", title: "7号线 · 旅行者中心 → 西归浦客运站", detail: "12.9 km，目标3–3.5小时，完成三章。", type: "徒步", place: "traveler" },
         { id: "0926-step-03", time: "09:45", title: "客运站补给与盖章", detail: "预留20–30分钟补水进食，确认7-1起点章。", type: "补给", place: "seogwipoTerminal" },
         { id: "0926-step-04", time: "10:15", title: "7-1号线 · 客运站 → 旅行者中心", detail: "15.7 km，目标4–4.5小时，完成三章。", type: "徒步", place: "seogwipoTerminal" },
@@ -315,6 +315,16 @@
       return Object.assign({ resolveStepId: cutoffStepIds[item.id] }, item);
     });
   });
+
+  // Resolve deadlines only from a relevant record, never from elapsed time or legacy execution state.
+  const cutoffEvidence = {
+    "0924-route-1": { completionStamps: ["1-start", "1-middle", "1-end"] },
+    "0925-luggage": { confirmationIds: ["kenny-luggage"] },
+    "0925-finish": { completionStamps: ["5-start", "5-middle", "5-end", "6-start", "6-middle", "6-end"] },
+    "0926-finish": { completionStamps: ["7-start", "7-middle", "7-end", "7-1-start", "7-1-middle", "7-1-end"] },
+    "0928-route-10": { completionStamps: ["10-start", "10-middle", "10-end"] }
+  };
+  days.forEach(function (day) { day.cutoffs.forEach(function (cutoff) { Object.assign(cutoff, cutoffEvidence[cutoff.id] || {}); }); });
 
   const confirmations = [
     { id: "playce-luggage", dayId: "0924", label: "Playce 07:45寄存已确认", hint: "联系酒店" },
