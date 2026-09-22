@@ -1185,6 +1185,18 @@
     return data.categories[item.category] || data.categories.other;
   }
 
+  function checkinRouteLabels(item) {
+    return (item.routeIds || []).map(function (id) { return id + "号线"; });
+  }
+
+  function renderFoodRating(item, place) {
+    const rating = item.foodRating;
+    if (!rating) return "";
+    const placeUrl = "https://place.map.kakao.com/" + place.kakaoPlaceId;
+    return '<div class="food-rating"><a class="food-rating-link" href="' + htmlEscape(placeUrl) + '" target="_blank" rel="noopener" aria-label="查看' + htmlEscape(place.name) + '的Kakao门店与评分"><strong>' + Number(rating.score).toFixed(1) + '<small> / 5</small></strong><span>' + rating.count + '人评分</span><span class="food-place-link">Kakao门店 ' + icon("external-link.svg") + '</span></a><p>' + htmlEscape(rating.checkedAt) + ' 查询 · 非实时评分</p></div>' +
+      '<details class="food-reference"><summary>营业与评分说明 ' + icon("chevron-down.svg") + '</summary><p>' + htmlEscape(item.hours || "营业时间待确认。") + '</p><p>沿线周边候选，并非最高分榜单；营业、价格与库存以门店当日公告为准。</p><a href="' + htmlEscape(rating.sourceUrl) + '" target="_blank" rel="noopener">查看Daum展示的Kakao评分来源 ' + icon("external-link.svg") + '</a></details>';
+  }
+
   function renderCheckinCard(item) {
     const place = placeForCheckin(item);
     const category = checkinCategory(item);
@@ -1192,10 +1204,11 @@
     const checked = Boolean(state.checkinChecks[item.id]);
     const detail = [item.dish, item.note].filter(Boolean).join(" · ");
     return '<article class="checkin-card ' + (checked ? "completed" : "") + (recentCheckins.has(item.id) ? " just-visited" : "") + '" data-checkin-card="' + htmlEscape(item.id) + '"><div class="checkin-card-top"><div><span class="category-label">' + icon(category.icon) + htmlEscape(category.label) + '</span><h2>' + htmlEscape(place.name) + '</h2>' + (checked ? '<span class="visited-badge">' + icon("check.svg") + '已到访</span>' : '') + (place.korean ? '<p class="checkin-korean">' + htmlEscape(place.korean) + "</p>" : "") + '</div><button class="checkin-toggle ' + (checked ? "checked" : "") + '" type="button" data-toggle-checkin="' + htmlEscape(item.id) + '" aria-pressed="' + checked + '" aria-label="' + (checked ? "取消打卡" : "标记已打卡") + '">' + icon("check.svg") + "</button></div>" +
-      '<div class="checkin-meta"><span>' + htmlEscape(day.date) + "</span><span>" + htmlEscape(item.priority || "想去") + "</span>" + (item.slot ? "<span>" + htmlEscape(item.slot) + "</span>" : "") + "</div>" +
+      '<div class="checkin-meta"><span>' + htmlEscape(day.date) + "</span>" + checkinRouteLabels(item).map(function (label) { return '<span class="checkin-route">' + htmlEscape(label) + '</span>'; }).join("") + "<span>" + htmlEscape(item.priority || "想去") + "</span>" + (item.slot ? "<span>" + htmlEscape(item.slot) + "</span>" : "") + "</div>" +
+      renderFoodRating(item, place) +
       (detail ? '<p class="checkin-detail">' + htmlEscape(detail) + "</p>" : "") +
       (place.address ? '<p class="place-address"><b>' + htmlEscape(place.korean || place.name) + "</b> · " + htmlEscape(place.address) + "</p>" : "") +
-      (!hasCoordinates(place) ? '<p class="location-warning">' + (item.routeHighlight ? "按韩文地名搜索：具体位置以官方线路图和现场路标为准。" : "定位待补充：地图将先打开搜索结果。") + '</p>' : "") +
+      (!hasCoordinates(place) ? '<p class="location-warning">' + (item.routeHighlight ? "按韩文地名搜索：具体位置以官方线路图和现场路标为准。" : item.foodRating ? "精确坐标待补充：可点上方Kakao门店查看具体地点；下方导航按钮暂用搜索。" : "定位待补充：地图将先打开搜索结果。") + '</p>' : "") +
       '<div class="checkin-card-actions">' + mapLinks(place, item.mode, true) +
       (item.custom ? '<div class="custom-actions"><button type="button" data-edit-checkin="' + htmlEscape(item.id) + '" aria-label="编辑' + htmlEscape(place.name) + '" title="编辑">' + icon("pencil.svg") + '</button><button class="delete-action" type="button" data-delete-checkin="' + htmlEscape(item.id) + '" aria-label="删除' + htmlEscape(place.name) + '" title="删除">' + icon("trash-2.svg") + "</button></div>" : "") +
       "</div></article>";
@@ -1223,8 +1236,10 @@
 
   function checkinMatchesQuery(item, query) {
     if (!query) return true;
+    const routeQuery = /^(\d+(?:-\d+)?)\s*号线$/.exec(query);
+    if (routeQuery) return (item.routeIds || []).includes(routeQuery[1]);
     const place = placeForCheckin(item);
-    return [place.name, place.korean, place.address, item.dish, item.note, item.priority, item.slot]
+    return [place.name, place.korean, place.address, item.dish, item.note, item.priority, item.slot, checkinRouteLabels(item).join(" ")]
       .filter(Boolean).join(" ").toLocaleLowerCase("zh-CN").includes(query);
   }
 

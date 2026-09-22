@@ -1030,6 +1030,67 @@ test("version 4 migration and version 5 import keep records while old execution 
   expect(saved.expenses).toHaveLength(1);
 });
 
+test("route food snapshots preserve visits and support precise route search and offline reload", async ({ page, context }) => {
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.clock.install({ time: new Date("2026-09-22T00:00:00Z") });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(url);
+  await waitForAppWorker(page);
+  await page.evaluate(() => {
+    const state = JSON.parse(localStorage.getItem("jeju-olle-plan-v5")) || { version: 5 };
+    state.activeDay = "0924";
+    state.activeView = "checkins";
+    state.checkinChecks = state.checkinChecks || {};
+    state.checkinChecks["cafe-salle"] = true;
+    state.checkinChecks.angeori = true;
+    state.notes = "我的美食记录";
+    state.customCheckins = [{ id: "my-food", name: "我的私藏小店", dayId: "0924", category: "food" }];
+    localStorage.setItem("jeju-olle-plan-v5", JSON.stringify(state));
+  });
+  await page.reload();
+  const bakery = page.locator('#checkin-list [data-checkin-card="boryong"]');
+  await expect(bakery).toContainText("4.8");
+  await expect(bakery).toContainText("743人评分");
+  await expect(bakery).toContainText("2026-09-22 查询 · 非实时评分");
+  await expect(bakery.locator(".food-rating-link")).toHaveAttribute("href", "https://place.map.kakao.com/10375136");
+  await expect(bakery.locator(".food-reference")).not.toHaveAttribute("open", "");
+  await bakery.locator(".food-reference > summary").click();
+  await expect(bakery.locator(".food-reference")).toContainText("10:00–22:00");
+  await expect(bakery.locator(".food-reference > a")).toHaveAttribute("href", /^https:\/\/search\.daum\.net\/search\?w=tot&q=/);
+  await expect(page.locator('#checkin-list [data-checkin-card="my-food"]')).toBeVisible();
+  await expect(page.locator('#checkin-list [data-checkin-card="cafe-salle"]')).toHaveClass(/completed/);
+  await expandDetails(page, ".checkin-filters");
+  await page.locator('[data-filter-day="all"]').click();
+  await page.locator("#checkin-search-input").fill("1号线");
+  await expect(page.locator('#checkin-list [data-checkin-card="boryong"]')).toBeVisible();
+  await expect(page.locator('#checkin-list [data-checkin-card="peanut-caramel"]')).toHaveCount(0);
+  await expect(page.locator('#checkin-list [data-checkin-card="nammae-newtown"]')).toHaveCount(0);
+  await page.locator("#checkin-search-input").fill("7-1号线");
+  await expect(page.locator('#checkin-list [data-checkin-card="nammae-newtown"]')).toContainText("时间冲突");
+  await expect(page.locator('#checkin-list [data-checkin-card="yeongeun"]')).toHaveCount(0);
+  await page.locator("#checkin-search-input").fill("8号线");
+  const noodles = page.locator('#checkin-list [data-checkin-card="suduri"]');
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await expect(noodles).toContainText("800人评分");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+    expect(await noodles.locator(".food-rating-link").evaluate(element => element.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
+    await noodles.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: "test-results/food-ratings-" + width + ".png" });
+  }
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.locator("#network-status")).toContainText("离线可用");
+  await expect(page.locator('#checkin-list [data-checkin-card="boryong"]')).toContainText("743人评分");
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")));
+  expect(saved.checkinChecks["cafe-salle"]).toBe(true);
+  expect(saved.checkinChecks.angeori).toBe(true);
+  expect(saved.customCheckins[0].id).toBe("my-food");
+  expect(saved.notes).toBe("我的美食记录");
+  expect(errors).toEqual([]);
+});
+
 test("ordinary home works across viewports with inherited icon colors, touch targets and print", async ({ page }) => {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));

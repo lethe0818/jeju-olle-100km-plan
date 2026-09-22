@@ -33,6 +33,18 @@
     chunsim: { name: "Chunsim's 总店", korean: "춘심이네 본점", address: "제주 서귀포시 안덕면 창천중앙로24번길 16", lat: 33.2645164, lng: 126.370493 },
     hodoBakery: { name: "Hodo Bakery", korean: "호도제과", address: "제주 서귀포시 안덕면 화순로 132", lat: 33.2465429, lng: 126.3322486 },
     miyeong: { name: "Miyeongine 生鱼片餐厅", korean: "미영이네", address: "제주 서귀포시 대정읍 하모항구로 42", lat: 33.217709, lng: 126.2497839 },
+    boryong: { name: "宝龙制果 · 城山面包店", korean: "보룡제과", address: "제주특별자치도 서귀포시 성산읍 고성오조로 48-1 1층", kakaoPlaceId: "10375136" },
+    seongsanPork: { name: "海景黑猪肉 · 城山本店", korean: "전망좋은집흑돼지 성산본점", address: "제주특별자치도 서귀포시 성산읍 일출로 248 1층", kakaoPlaceId: "1538639318" },
+    peanutCaramel: { name: "花生焦糖屋 · 牛岛", korean: "피넛캬라멜하우스", address: "제주특별자치도 제주시 우도면 삼양고수물길 11 1층 2호", kakaoPlaceId: "163272488" },
+    wimiMeal: { name: "为美定食", korean: "위미정식", address: "제주특별자치도 서귀포시 남원읍 위미중앙로196번길 15 1층", kakaoPlaceId: "452183254" },
+    gongcheon: { name: "公泉浦食堂", korean: "공천포식당", address: "제주특별자치도 서귀포시 남원읍 공천포로 89", kakaoPlaceId: "8204729" },
+    odonga: { name: "Odon-ga 黑猪肉", korean: "오돈가", address: "제주특별자치도 서귀포시 태평로 444 1층", kakaoPlaceId: "2046167040" },
+    yeongeun: { name: "Yeongeun 面馆 · 法还", korean: "영은맛집", address: "제주특별자치도 서귀포시 막숙포로 66-18", kakaoPlaceId: "490279102" },
+    nammaeNewtown: { name: "兄妹家黑猪肉 · 新市区店", korean: "남매네흑돼지 신시가지점", address: "제주특별자치도 서귀포시 신서로32번길 18 1층", kakaoPlaceId: "713217222" },
+    suduri: { name: "中门 Suduri 海螺刀切面", korean: "중문수두리보말칼국수", address: "제주특별자치도 서귀포시 천제연로 192 1층", kakaoPlaceId: "1148098112" },
+    seonchaehyang: { name: "Seonchaehyang 鲍鱼料理", korean: "제주선채향", address: "제주특별자치도 서귀포시 안덕면 사계남로84번길 6 1층", kakaoPlaceId: "1612962916" },
+    hwasunMeal: { name: "和顺韩家食堂", korean: "화순한가네식당", address: "제주특별자치도 서귀포시 안덕면 화순해안로 109", kakaoPlaceId: "623072470" },
+    gapadoHotdog: { name: "金镇贤热狗 · 加波岛", korean: "가파도 김진현 핫도그", address: "제주특별자치도 서귀포시 대정읍 가파로67번길 95-7", kakaoPlaceId: "447177026" },
     malmiOreum: { name: "马头岳观景", korean: "말미오름", address: "" },
     jongdalSalt: { name: "终达里旧盐田", korean: "종달리 옛 소금밭", address: "" },
     udoCoral: { name: "牛岛红藻团块海滨", korean: "홍조단괴해변", address: "" },
@@ -66,6 +78,52 @@
     { id: "chunsim", dayId: "0927", place: "chunsim", category: "food", priority: "可选晚餐", slot: "返回民宿后", dish: "整条烤带鱼", note: "偏多人分享菜，独自用餐先确认合适份量。", mode: "打车" },
     { id: "miyeong", dayId: "0928", place: "miyeong", category: "food", priority: "可选午餐", slot: "领证后 · 约13:35–14:30", dish: "青花鱼刺身", note: "与提前去机场二选一；排队超过20分钟就放弃，14:30后出发去机场。", mode: "打车" }
   ];
+
+  // Snapshot read on 2026-09-22 from Daum's public Kakao place cards.
+  // Counts are star-rating participants, not the separate blog-review count.
+  // Keep existing IDs: users' completed visits must survive content updates.
+  const foodSnapshots = {
+    "cafe-salle": { routeIds: ["1-1"], score: 4.6, count: 135, placeId: "811454849", query: "제주 우도 맛집", hours: "通常09:30–18:00；中秋营业待确认。", note: "保留花生曲奇愿望清单，库存现场确认；公开菜单另有花生冰淇淋₩6,000、花生拿铁₩7,000。最迟16:10离店。" },
+    "seom-sonai": { routeIds: ["1-1"], score: 4.3, count: 209, placeId: "24213584", query: "제주 우도 맛집", hours: "营业时间与中秋安排待确认。" },
+    "angeori": { routeIds: ["7-1"], score: 3.0, count: 122, placeId: "7999360", query: "제주 안거리밖거리", priority: "普通备选", hours: "营业时间与中秋安排待确认。", note: "保留原收藏和已到访记录；本次查询评分较低，降低优先级，先看其他晚餐候选。" },
+    "miyeong": { routeIds: ["10"], score: 4.3, count: 567, placeId: "9006988", query: "제주 미영이네 식당", hours: "通常11:30–22:00，20:30最后点单；周三休。", note: "刺身配汤小份约₩70,000，单人先确认份量；与提前去机场二选一，排队超过20分钟就跳过，14:30后出发去机场。" }
+  };
+  const foodRecommendations = [
+    { id: "boryong", dayId: "0924", routeIds: ["1"], place: "boryong", category: "cafe", priority: "顺路补给", slot: "牛岛返航后 · 回酒店前", dish: "面包、栗子吐司", note: "位于古城里，不是清晨采购点；晚上售罄就跳过，不为买面包影响14:00船班。", mode: "步行", score: 4.8, count: 743, query: "제주 성산 맛집", hours: "通常10:00–22:00，售罄早收；周二休，9/28另标休息。9/24中秋安排待确认。" },
+    { id: "seongsan-pork", dayId: "0924", routeIds: ["1"], place: "seongsanPork", category: "food", priority: "晚餐备选", slot: "牛岛返航后 · 与Manjo二选一", dish: "黑猪肉、鲍鱼海鲜砂锅", note: "烤肉先确认单人最低点单量；公开菜单另有约₩15,000的鲍鱼海鲜砂锅等单份菜。", mode: "步行", score: 4.8, count: 462, query: "제주 전망좋은집흑돼지 성산본점", hours: "通常12:00–22:00；中秋营业与最后点单时间待确认。" },
+    { id: "peanut-caramel", dayId: "0924", routeIds: ["1-1"], place: "peanutCaramel", category: "cafe", priority: "甜品备选", slot: "牛岛骑行途中 · 与Cafe Salle二选一", dish: "花生冰淇淋约₩6,000、手工焦糖约₩1,400", note: "53人评分的满分候选，不代表全岛第一；只选一家久坐，另一家有余量再外带，留足还车与回港时间。", mode: "骑行", score: 5.0, count: 53, query: "제주 피넛캬라멜하우스", hours: "通常10:00–18:00；中秋营业待确认。" },
+    { id: "wimi-meal", dayId: "0925", routeIds: ["5"], place: "wimiMeal", category: "food", priority: "时间冲突 · 备选", slot: "为美村 · 仅晚经过时考虑", dish: "白切猪肉／炒猪肉定食约₩10,000", note: "仅15人评分，样本较少。10:30才开门，按原徒步计划经过时可能尚未营业，不专门等开门。", mode: "步行", score: 5.0, count: 15, query: "제주 남원 위미 맛집", hours: "通常10:30–15:00；周日休。9/25中秋当天是否营业待确认。" },
+    { id: "gongcheon", dayId: "0925", routeIds: ["5"], place: "gongcheon", category: "food", priority: "补餐备选", slot: "5号线后段 · 公泉浦", dish: "鲍鱼冷汤／鲍鱼盖饭约₩16,000", note: "比为美村更靠近路线后段；仍须确认到达时已营业，中秋当天带好备用补给。", mode: "步行", score: 4.1, count: 270, query: "제주 공천포식당", hours: "通常10:00–15:30，15:00最后点单；周四休。9/25中秋营业待确认。" },
+    { id: "odonga", dayId: "0925", routeIds: ["6"], place: "odonga", category: "food", priority: "晚餐备选", slot: "走完6号线 · 入住后", dish: "黑猪肉", note: "城区晚餐候选；单人能否只点一份需提前确认，不影响白天的徒步进度。", mode: "步行", score: 4.6, count: 146, query: "제주 서귀동 맛집", hours: "通常12:00–24:00；9/25中秋营业待确认。" },
+    { id: "yeongeun", dayId: "0926", routeIds: ["7"], place: "yeongeun", category: "food", priority: "时间冲突 · 备选", slot: "法还浦口附近 · 10:00后", dish: "猪肉汤面约₩8,000、海螺刀切面约₩9,000", note: "10:00才开门，按原计划可能提前经过；不要为了等面馆推迟7-1出发。", mode: "步行", score: 4.5, count: 113, query: "제주 서귀포시 법환동 식당", hours: "通常10:00–16:00；周二休，中秋营业待确认。" },
+    { id: "nammae-newtown", dayId: "0926", routeIds: ["7-1"], place: "nammaeNewtown", category: "food", priority: "时间冲突 · 备选", slot: "客运站周边 · 11:00后", dish: "午间猪肉包饭定食约₩10,000", note: "11:00才开门，与10:15开始7-1冲突，仅延迟出发时考虑；先问单人午间定食是否供应。", mode: "步行", score: 4.8, count: 106, query: "제주 서귀포 신시가지 맛집", hours: "通常11:00–23:00，22:15最后点单；午间菜单时段和中秋安排待确认。" },
+    { id: "suduri", dayId: "0927", routeIds: ["8"], place: "suduri", category: "food", priority: "绕路备选", slot: "中门段 · 仅进度领先时", dish: "海螺刀切面约₩12,000、海螺粥约₩14,000", note: "需从海岸线绕入中门城区；当天还要走10号线，排队或绕路耗时较长就跳过。", mode: "步行", score: 4.5, count: 800, query: "제주 중문 맛집", hours: "通常08:00–16:00；周二休，不提供外带。中秋安排待确认。" },
+    { id: "seonchaehyang", dayId: "0927", routeIds: ["10"], place: "seonchaehyang", category: "food", priority: "午餐备选", slot: "10号线 · 四季海岸一带", dish: "鲍鱼刀切面、鲍鱼粥", note: "现地址在四季海岸一带，不在大坪。与和顺韩家午餐二选一；先查排队和当日营业，不为美食耽误中间章。", mode: "步行", score: 4.8, count: 474, query: "제주선채향", hours: "本次未核实完整营业时段；出发前查看Kakao门店并确认是否仍可取号。" },
+    { id: "hwasun-meal", dayId: "0927", routeIds: ["10"], place: "hwasunMeal", category: "food", priority: "午餐备选", slot: "和顺起点前 · 时间充足再坐下吃", dish: "炸猪肉定食约₩13,000、泡菜汤饭约₩10,000", note: "和顺海岸路109号，适合开始10号线前补餐；不能超过12:30出发截止。炒猪肉需点两人份，单人优先选定食。", mode: "步行", score: 4.7, count: 278, query: "제주 화순 맛집", hours: "通常10:00–17:00；周四休，食材售罄提前结束。中秋安排待确认。" },
+    { id: "gapado-hotdog", dayId: "0928", routeIds: ["10-1"], place: "gapadoHotdog", category: "food", priority: "顺路外带", slot: "加波岛徒步途中 · 不影响返船", dish: "原味／微辣热狗约₩4,000", note: "适合短暂停留和外带；加波岛取消时一起跳过，不额外安排岛上午餐。", mode: "步行", score: 4.7, count: 59, query: "제주 가파도 맛집", hours: "通常09:00–19:00；仍以返程船班为硬截止。" }
+  ];
+  function applyFoodSnapshot(item, snapshot) {
+    const place = places[item.place];
+    if (snapshot.placeId) place.kakaoPlaceId = snapshot.placeId;
+    item.routeIds = snapshot.routeIds;
+    item.foodRating = { score: snapshot.score, count: snapshot.count, checkedAt: "2026-09-22", sourceUrl: "https://search.daum.net/search?w=tot&q=" + encodeURIComponent(snapshot.query) };
+    item.hours = snapshot.hours;
+    if (snapshot.priority) item.priority = snapshot.priority;
+    if (snapshot.note) item.note = snapshot.note;
+  }
+  defaultCheckins.forEach(function (item) {
+    if (foodSnapshots[item.id]) applyFoodSnapshot(item, foodSnapshots[item.id]);
+  });
+  foodRecommendations.forEach(function (recommendation) {
+    const item = Object.assign({}, recommendation);
+    applyFoodSnapshot(item, recommendation);
+    delete item.score; delete item.count; delete item.query;
+    defaultCheckins.push(item);
+  });
+  const existingFoodRoutes = { "cafe-the-light": ["1"], manjo: ["1"], "halmeoni-tteok": ["6"], ojeong: ["6"], "hodo-bakery": ["10"], chunsim: ["8"] };
+  defaultCheckins.forEach(function (item) {
+    if (existingFoodRoutes[item.id]) item.routeIds = existingFoodRoutes[item.id];
+  });
 
   const routes = {
     "1": { id: "1", km: 15.1, mode: "徒步", counts: true },
@@ -135,7 +193,7 @@
 
   Object.keys(routeGuides).forEach(function (routeId) {
     routeGuides[routeId].highlights.forEach(function (point) {
-      defaultCheckins.push({ id: point.id, dayId: point.dayId, place: point.place, category: "scenic", priority: "顺路", slot: routeId + "号线 " + point.km.toFixed(1) + " km · " + point.stop, note: point.note, mode: routes[routeId].mode, routeHighlight: true });
+      defaultCheckins.push({ id: point.id, dayId: point.dayId, routeIds: [routeId], place: point.place, category: "scenic", priority: "顺路", slot: routeId + "号线 " + point.km.toFixed(1) + " km · " + point.stop, note: point.note, mode: routes[routeId].mode, routeHighlight: true });
     });
   });
 

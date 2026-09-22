@@ -753,6 +753,21 @@ body[data-execution-focus="true"] .today-shell { padding-top: 14px; }
 .checkin-meta { margin: 13px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .checkin-meta span { padding: 4px 7px; border-radius: 4px; color: var(--muted); background: var(--mist); font-size: 10px; font-weight: 700; }
 .checkin-detail { margin: 11px 0 0; color: var(--muted); font-size: 12px; text-wrap: pretty; }
+.checkin-meta .checkin-route { color: var(--ocean-deep); background: var(--ocean-soft); }
+.food-rating { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--paper); border: 1px solid var(--line); }
+.food-rating-link { min-height: 44px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--ocean-deep); text-decoration: none; }
+.food-rating-link strong { font-size: 23px; font-variant-numeric: tabular-nums; line-height: 1.3; }
+.food-rating-link small, .food-rating-link > span { font-size: 12px; font-weight: 500; }
+.food-rating-link .food-place-link { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; }
+.food-place-link .ui-icon { width: 14px; height: 14px; }
+.food-rating p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+.food-reference { margin-top: 4px; font-size: 13px; }
+.food-reference > summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: 8px; color: var(--ocean); cursor: pointer; list-style: none; }
+.food-reference > summary::-webkit-details-marker { display: none; }
+.food-reference > summary .ui-icon { width: 16px; height: 16px; transition: transform 160ms var(--ease); }
+.food-reference[open] > summary .ui-icon { transform: rotate(180deg); }
+.food-reference p { margin: 4px 0 8px; color: var(--muted); text-wrap: pretty; }
+.food-reference > a { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; color: var(--ocean); overflow-wrap: anywhere; }
 .location-warning { margin-top: 11px; padding: 8px 9px; border-radius: 5px; color: var(--muted); background: var(--mist); font-size: 12px; }
 .checkin-card-actions { margin-top: 12px; padding-top: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); }
 .checkin-card-actions .map-actions { margin-top: 0; }
