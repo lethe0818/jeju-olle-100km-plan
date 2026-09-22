@@ -962,6 +962,10 @@
     return '<div class="execution-statusbar"><div class="' + (cutoff ? cutoff.tone : "normal") + '"><span>硬截止</span><strong>' + htmlEscape(cutoffDisplay(day, cutoff)) + '</strong></div><div class="' + (hasHighWeatherRisk(day.id) ? "warning" : "normal") + '"><span>沿途天气</span><strong>' + htmlEscape(weather) + '</strong></div></div>';
   }
 
+  function stampName(point) {
+    return '<span class="stamp-name-ko" lang="ko">' + htmlEscape(point.korean) + '</span><span class="stamp-name-zh" lang="zh-CN">（' + htmlEscape(point.chinese) + '）</span>';
+  }
+
   function renderExecutionStamp(day) {
     const stamp = nextStamp(day);
     if (!stamp) {
@@ -976,7 +980,7 @@
     else if (executionLocationError) locationCopy = executionLocationError;
     else if (Number.isFinite(distance)) locationCopy = "直线约 " + formatDistance(distance) + " · " + (Number.isFinite(executionLocation.accuracy) ? "精度 ±" + Math.round(executionLocation.accuracy) + " m" + (executionLocation.accuracy > 100 ? "（低精度）" : "") : "精度未知") + " · " + new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(executionLocation.updatedAt)) + " 更新";
     else locationCopy = "点击后仅申请一次位置权限";
-    return '<section class="execution-stamp"><div class="execution-section-label">' + icon("award.svg") + '<span>下一枚章</span><a href="' + htmlEscape(officialImage) + '" target="_blank" rel="noopener">官方章点图</a></div><div class="execution-stamp-head"><div><span>' + htmlEscape(stamp.routeId) + '号线 · ' + htmlEscape(stamp.label) + '章</span><h3 lang="ko">' + htmlEscape(stamp.point.korean) + '</h3></div><strong>' + stamp.point.km.toFixed(1) + '<small>KM</small></strong></div><p>' + htmlEscape(stamp.point.note || "按官方路线图和现场偶来标识寻找章亭。") + '</p><div class="execution-location"><span>' + htmlEscape(locationCopy) + '</span>' + (hasCoordinates(place) ? '<button type="button" data-update-execution-location ' + (executionLocationPending ? "disabled" : "") + '>' + icon("navigation.svg") + "更新位置</button>" : "") + '</div><div class="execution-stamp-actions">' + mapLinks(place, "步行", true) + '<label class="execution-stamp-check"><input type="checkbox" data-stamp="' + stamp.key + '" aria-label="' + htmlEscape(stamp.routeId + "号线" + stamp.label + "章已盖") + '"><span>' + icon("check.svg") + "已盖好</span></label></div></section>";
+    return '<section class="execution-stamp"><div class="execution-section-label">' + icon("award.svg") + '<span>下一枚章</span><a href="' + htmlEscape(officialImage) + '" target="_blank" rel="noopener">官方章点图</a></div><div class="execution-stamp-head"><div><span>' + htmlEscape(stamp.routeId) + '号线 · ' + htmlEscape(stamp.label) + '章</span><h3 class="stamp-name">' + stampName(stamp.point) + '</h3></div><strong>' + stamp.point.km.toFixed(1) + '<small>KM</small></strong></div><p>' + htmlEscape(stamp.point.note || "按官方路线图和现场偶来标识寻找章亭。") + '</p><div class="execution-location"><span>' + htmlEscape(locationCopy) + '</span>' + (hasCoordinates(place) ? '<button type="button" data-update-execution-location ' + (executionLocationPending ? "disabled" : "") + '>' + icon("navigation.svg") + "更新位置</button>" : "") + '</div><div class="execution-stamp-actions">' + mapLinks(place, "步行", true) + '<label class="execution-stamp-check"><input type="checkbox" data-stamp="' + stamp.key + '" aria-label="' + htmlEscape(stamp.routeId + "号线" + stamp.label + "章已盖") + '"><span>' + icon("check.svg") + "已盖好</span></label></div></section>";
   }
 
   function renderExecutionCurrent(day, execution) {
@@ -1101,7 +1105,7 @@
     if (!keys.length) return "";
     const stamp = nextStamp(day);
     const checked = keys.filter(function (key) { return state.stamps[key]; }).length;
-    return '<details class="today-stamp ' + (recentlyStamped ? "just-stamped" : "") + '" data-stamp-day="' + day.id + '" ' + (openStampDays.has(day.id) ? "open" : "") + '><summary class="today-stamp-summary"><span>' + icon("award.svg") + '<span><b>' + (stamp ? '下一枚章 · ' + htmlEscape(stamp.routeId) + '号线' : '今天的章已集齐') + '</b><small>' + (stamp ? htmlEscape(stamp.label) + '章 · ' + htmlEscape(stamp.point.korean) : '记得检查纸质护照上的印迹') + '</small></span></span><strong>' + checked + '/' + keys.length + icon("chevron-down.svg") + '</strong></summary><div class="next-stamp-detail">' + renderExecutionStamp(day) + '<button class="text-button" type="button" data-open-plan-stamps>查看当天全部章点</button></div></details>';
+    return '<details class="today-stamp ' + (recentlyStamped ? "just-stamped" : "") + '" data-stamp-day="' + day.id + '" ' + (openStampDays.has(day.id) ? "open" : "") + '><summary class="today-stamp-summary"><span>' + icon("award.svg") + '<span><b>' + (stamp ? '下一枚章 · ' + htmlEscape(stamp.routeId) + '号线' : '今天的章已集齐') + '</b><small>' + (stamp ? htmlEscape(stamp.label) + '章 · ' + htmlEscape(stamp.point.korean) + '（' + htmlEscape(stamp.point.chinese) + '）' : '记得检查纸质护照上的印迹') + '</small></span></span><strong>' + checked + '/' + keys.length + icon("chevron-down.svg") + '</strong></summary><div class="next-stamp-detail">' + renderExecutionStamp(day) + '<button class="text-button" type="button" data-open-plan-stamps>查看当天全部章点</button></div></details>';
   }
 
   function renderCutoffRow(cutoff, resolved) {
@@ -1143,7 +1147,7 @@
           name: point.korean + "章", korean: point.korean,
           address: "官方图：本线 " + point.km.toFixed(1) + " km 处；请沿现场偶来标识找盖章亭"
         };
-        return '<article class="stamp-point"><div class="stamp-point-main"><span class="stamp-km">' + point.km.toFixed(1) + '<small>KM</small></span><div class="stamp-point-text"><span class="stamp-stage">' + labels[stamp] + '章</span><strong lang="ko">' + htmlEscape(point.korean) + '</strong><p>' + htmlEscape(point.note || (nearby ? "导航到附近地标，按官方图和现场路标找章亭" : "未核实章亭精确坐标 · 地名搜索")) + '</p></div><label class="stamp-check"><input type="checkbox" data-stamp="' + key + '" aria-label="' + route.id + '号线' + labels[stamp] + '章已盖" ' + (state.stamps[key] ? "checked" : "") + '><span>已盖</span></label></div>' + mapLinks(place, "步行", true) + '</article>';
+        return '<article class="stamp-point"><div class="stamp-point-main"><span class="stamp-km">' + point.km.toFixed(1) + '<small>KM</small></span><div class="stamp-point-text"><span class="stamp-stage">' + labels[stamp] + '章</span><strong class="stamp-name">' + stampName(point) + '</strong><p>' + htmlEscape(point.note || (nearby ? "导航到附近地标，按官方图和现场路标找章亭" : "未核实章亭精确坐标 · 地名搜索")) + '</p></div><label class="stamp-check"><input type="checkbox" data-stamp="' + key + '" aria-label="' + route.id + '号线' + labels[stamp] + '章已盖" ' + (state.stamps[key] ? "checked" : "") + '><span>已盖</span></label></div>' + mapLinks(place, "步行", true) + '</article>';
       }).join("") + '<p class="stamp-source">地点及公里标据<a href="' + htmlEscape(officialCourseUrl(route.id)) + '" target="_blank" rel="noopener">济州偶来官方路线页</a>；官方章点图需联网打开，图并非盖章亭实拍。</p></section>';
     }).join("") + "</div>";
   }

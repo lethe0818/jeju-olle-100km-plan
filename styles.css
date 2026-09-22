@@ -1477,6 +1477,11 @@ button.cutoff-check { border: 1px solid var(--line-strong); border-radius: var(-
 .route-highlight.completed .route-highlight-label { color: var(--success); }
 .route-highlight-copy p, .stamp-point-text p { font-size: 14px; line-height: 1.6; }
 .stamp-point-text strong { font-size: 15px; font-weight: 650; }
+.stamp-point-text strong.stamp-name, .execution-stamp-head h3.stamp-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 6px; }
+.stamp-name span.stamp-name-ko { color: var(--graphite); font-size: inherit; font-weight: 650; }
+.stamp-name span.stamp-name-zh { color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
+.execution-stamp-head > div { min-width: 0; }
+.execution-stamp-head > strong { flex-shrink: 0; }
 .stamp-stage { color: var(--ocean); }
 .stamp-route-hint { color: var(--muted); background: var(--mist); font-size: 12px; }
 .checkin-filters { margin: 0 0 16px; border-bottom: 1px solid var(--line); }

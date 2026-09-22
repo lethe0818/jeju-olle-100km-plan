@@ -151,6 +151,38 @@
     "10-1": { map: "road_10-1_imgmap_mo_2024.jpg", start: { korean: "상동포구", km: 0, place: "gapado" }, end: { korean: "가파치안센터", km: 4.2, note: "官方分段图未标中间章；纸质护照以现场为准。终点不在返程码头，另留回港时间。" } }
   };
 
+  // Chinese reading aids; preserve the official Korean names for signs and map searches.
+  const stampChineseNames = {
+    "시흥리 버스정류장": "始兴里公交站",
+    "목화휴게소": "木花休息站",
+    "광치기해변": "广峙其海滩",
+    "천진항 A": "天津港 A 点",
+    "하고수동해수욕장": "下古水洞海水浴场",
+    "남원포구": "南元浦口",
+    "위미 동백나무 군락지": "为美山茶树林",
+    "쇠소깍다리": "牛沼河口桥",
+    "소라의 성": "海螺之城",
+    "제주올레여행자센터": "济州偶来旅行者中心",
+    "두머니물공원": "杜莫尼水公园",
+    "서귀포버스터미널 앞": "西归浦客运站前",
+    "고근산 정상 (산불감시초소)": "孤根山山顶（山火瞭望哨）",
+    "월평아왜낭목 쉼터": "月坪荚蒾树休息区",
+    "베릿내 공원 정자": "贝里内公园凉亭",
+    "대평포구": "大坪浦口",
+    "제주올레공식안내소": "济州偶来官方咨询站",
+    "섯알오름 주차장 정자": "西卵峰停车场凉亭（Seotal）",
+    "하모체육공원": "下摹体育公园",
+    "상동포구": "上洞浦口",
+    "가파치안센터": "加波治安中心"
+  };
+  Object.values(stampLocations).forEach(function (locations) {
+    ["start", "middle", "end"].forEach(function (stage) {
+      if (locations[stage]) locations[stage].chinese = stampChineseNames[locations[stage].korean];
+    });
+  });
+  stampLocations["1-1"].hint = "官方图另标下牛目洞港 B 点（하우목동항 B，3.5 km / 13.2 km），先确认船实际停靠哪个港口。";
+  stampLocations["10"].start.note = "和顺金沙滩约在起点后 0.1 km；章在官方咨询站（안내소）。";
+
   const routeGuides = {
     "1": { title: "山丘到海岸", intro: "济州偶来最早开放的路：先登火山丘陵看城山与牛岛，再沿旧盐田和海岸走向广峙其。", highlights: [
       { id: "route-1-malmi", place: "malmiOreum", dayId: "0924", km: 1.8, stop: "5分钟", note: "登高看城山日出峰、牛岛与东部田野；不要久留，以免错过14:00牛岛船。" },
