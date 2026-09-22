@@ -1411,8 +1411,8 @@
     const layer = document.getElementById("celebration-layer");
     if (!layer) return;
     window.clearTimeout(celebrationTimer);
-    window.clearTimeout(toastTimer);
-    if (kind !== "milestone" && kind !== "goal") return;
+    const isMilestone = kind === "milestone" || kind === "goal";
+    if (isMilestone) window.clearTimeout(toastTimer);
     const isGoal = kind === "goal";
     const sparkPositions = [
       { x: "-136px", y: "-22px", r: "-24deg", tone: "coral" },
@@ -1427,15 +1427,16 @@
     const sparks = sparkPositions.map(function (spark) {
       return '<i class="celebration-spark ' + spark.tone + '" style="--spark-x:' + spark.x + ';--spark-y:' + spark.y + ';--spark-r:' + spark.r + '"></i>';
     }).join("");
-    const title = isGoal ? "100 km，一路的章都记得" : label + "的章，集齐了";
+    const title = isGoal ? "100 km，一路的章都记得" : kind === "milestone" ? label + "的章，集齐了" : kind === "visit" ? "又收藏了一段旅途" : "又盖好一枚章";
+    const actions = isMilestone ? '<div class="celebration-actions"><button type="button" data-toast-action="undo-stamp">撤销这枚章</button><button type="button" data-dismiss-celebration>收起</button></div>' : "";
     layer.classList.remove("leaving");
-    layer.innerHTML = '<div class="celebration-card celebration-' + kind + '">' + sparks + '<div class="celebration-seal">' + icon("award.svg") + '</div><div class="celebration-copy"><span>旅程纪念</span><strong>' + htmlEscape(title) + '</strong><p>' + htmlEscape(detail) + '</p><div class="celebration-actions"><button type="button" data-toast-action="undo-stamp">撤销这枚章</button><button type="button" data-dismiss-celebration>收起</button></div></div></div>';
-    document.getElementById("toast").hidden = true;
+    layer.innerHTML = '<div class="celebration-card celebration-' + kind + '">' + sparks + '<div class="celebration-seal">' + icon(kind === "visit" ? "map-pin-check.svg" : "award.svg") + '</div><div class="celebration-copy"><span>' + (isMilestone ? "旅程纪念" : kind === "visit" ? "打卡成功" : "盖章成功") + '</span><strong>' + htmlEscape(title) + '</strong><p>' + htmlEscape(detail || label) + '</p>' + actions + '</div></div>';
+    if (isMilestone) document.getElementById("toast").hidden = true;
     layer.hidden = false;
     celebrationTimer = window.setTimeout(function () {
       layer.classList.add("leaving");
-      celebrationTimer = window.setTimeout(function () { lastStampAction = null; hideCelebration(); }, 220);
-    }, 8000);
+      celebrationTimer = window.setTimeout(function () { if (isMilestone) lastStampAction = null; hideCelebration(); }, 220);
+    }, isMilestone ? 8000 : 2400);
   }
 
   function hideCelebration() {
@@ -2160,6 +2161,7 @@
       }
       const toggleCheckin = event.target.closest("[data-toggle-checkin]");
       if (toggleCheckin) {
+        hideCelebration();
         const routeDetails = toggleCheckin.closest("[data-route-disclosure]");
         if (routeDetails && routeDetails.open) openRouteDetails.add(routeDetails.dataset.routeDisclosure);
         const id = toggleCheckin.dataset.toggleCheckin;
@@ -2175,6 +2177,7 @@
         if (checked && place) {
           lastVisitAction = { id, name: place.name };
           showToast("已到访 · " + place.name, "撤销", "undo-visit", 8000);
+          showCelebration("visit", place.name, place.name);
         } else showToast("已取消到访记录");
         return;
       }
@@ -2228,6 +2231,7 @@
       }
       const toastAction = event.target.closest("[data-toast-action]");
       if (toastAction && toastAction.dataset.toastAction === "undo-visit" && lastVisitAction) {
+        hideCelebration();
         state.checkinChecks[lastVisitAction.id] = false;
         recentCheckins.delete(lastVisitAction.id);
         const name = lastVisitAction.name;
@@ -2312,7 +2316,10 @@
           lastStampAction = Object.assign({ key, autoAdvanced: Boolean(execution && linkedStepActive && !linkedStepDone && context.stepId && isStepDone(execution, context.stepId)) }, context);
           if (previousKm < 100 && completedKm() >= 100) showCelebration("goal", "100 km", "已集齐章的步行线路达到100 km，正式证书请携纸质护照现场办理。");
           else if (route && !wasComplete && tripLogic.routeComplete(route, state.stamps)) showCelebration("milestone", route.id + "号线", route.km + " km · 已收入更多页的旅程纪念" + (route.counts ? "" : " · 骑行不计认证"));
-          else showToast("已记录“" + context.label + "”", "撤销", "undo-stamp", 8000);
+          else {
+            showToast("已记录“" + context.label + "”", "撤销", "undo-stamp", 8000);
+            showCelebration("stamp", context.label, context.label + " · 这一步，值得纪念");
+          }
         } else if (lastStampAction && lastStampAction.key === key) {
           lastStampAction = null;
           hideCelebration();

@@ -855,9 +855,11 @@ test("home stamp entry saves instantly, follows chapter order and offers an eigh
   await page.locator('.today-stamp [data-stamp="1-start"]').click();
   await expect(page.locator(".today-stamp summary")).toContainText("中间章");
   await expect(page.locator(".today-stamp summary")).toContainText("1/6");
-  await expect(page.locator("#celebration-layer")).toBeHidden();
+  await expect(page.locator("#celebration-layer .celebration-stamp")).toBeVisible();
+  await expect(page.locator("#celebration-layer .celebration-seal")).toHaveCSS("animation-name", "none");
   await expect(page.locator('[data-toast-action="undo-stamp"]')).toBeVisible();
-  await page.clock.fastForward(7999);
+  await page.clock.runFor(7999);
+  await expect(page.locator("#celebration-layer")).toBeHidden();
   await expect(page.locator('[data-toast-action="undo-stamp"]')).toBeVisible();
   await page.locator('[data-toast-action="undo-stamp"]').click();
   await expect(page.locator(".today-stamp summary")).toContainText("起点章");
@@ -918,8 +920,9 @@ test("milestone undo owns its eight-second window and cannot undo a newer stamp"
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")).stamps["1-end"])).toBe(false);
   await page.locator('.today-stamp [data-stamp="1-end"]').click();
   await page.locator('.today-stamp [data-stamp="1-1-start"]').click();
-  await expect(page.locator("#celebration-layer")).toBeHidden();
+  await expect(page.locator("#celebration-layer .celebration-stamp")).toBeVisible();
   await page.locator('#toast [data-toast-action="undo-stamp"]').click();
+  await expect(page.locator("#celebration-layer")).toBeHidden();
   const stamps = await page.evaluate(() => JSON.parse(localStorage.getItem("jeju-olle-plan-v5")).stamps);
   expect(stamps["1-end"]).toBe(true);
   expect(stamps["1-1-start"]).toBe(false);
@@ -957,6 +960,7 @@ test("an overdue item does not hide the next deadline and explicit confirmation 
 });
 
 test("visit feedback stays readable in place, can be undone, and becomes a collected memory", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.goto(url);
   await page.locator('#view-today [data-day="0924"]').click();
   await page.locator('.app-dock [data-view-target="checkins"]').click();
@@ -964,6 +968,9 @@ test("visit feedback stays readable in place, can be undone, and becomes a colle
   await page.locator('#checkin-category-filter [data-filter-category="scenic"]').click();
   const point = page.locator('#checkin-list [data-checkin-card="route-1-malmi"]');
   await point.locator("[data-toggle-checkin]").click();
+  await expect(page.locator(".celebration-visit")).toBeVisible();
+  await expect(page.locator(".celebration-visit .celebration-seal")).toHaveCSS("animation-name", "celebration-seal-pop");
+  await expect(page.locator(".celebration-visit .celebration-spark").first()).toHaveCSS("display", "block");
   await expect(point).toBeVisible();
   await expect(point).toContainText("已到访");
   await expect(point).toHaveClass(/completed/);
@@ -974,6 +981,7 @@ test("visit feedback stays readable in place, can be undone, and becomes a colle
   expect(appearance.opacity).toBe("1");
   expect(appearance.decoration).not.toContain("line-through");
   await page.locator('[data-toast-action="undo-visit"]').click();
+  await expect(page.locator("#celebration-layer")).toBeHidden();
   await expect(point).not.toHaveClass(/completed/);
   await point.locator("[data-toggle-checkin]").click();
   await page.reload();

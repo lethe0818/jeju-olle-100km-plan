@@ -1540,10 +1540,9 @@ button.cutoff-check { border: 1px solid var(--line-strong); border-radius: var(-
 .toast button { flex: 0 0 auto; min-width: 44px; }
 .celebration-copy > span { font: 600 12px/1.4 var(--font); }
 .celebration-copy p { white-space: normal; text-overflow: clip; line-height: 1.5; }
-.celebration-card::after, .celebration-spark { display: none; }
-.celebration-milestone .celebration-card::after, .celebration-milestone .celebration-spark { display: block; }
-.celebration-card.celebration-milestone::after, .celebration-card.celebration-milestone .celebration-spark { display: block; }
-.celebration-card.celebration-goal::after, .celebration-card.celebration-goal .celebration-spark { display: block; }
+.celebration-card::after, .celebration-spark { display: block; }
+.celebration-card.celebration-stamp, .celebration-card.celebration-visit { pointer-events: none; }
+.celebration-spark { z-index: 2; pointer-events: none; }
 .celebration-card::after { pointer-events: none; }
 .celebration-layer.leaving .celebration-card { animation: celebration-card-out 180ms var(--ease) both; }
 .checkin-card.just-visited, .stamp-point.just-stamped, .today-stamp.just-stamped { animation: record-settle 520ms var(--ease); }
